@@ -1,1 +1,53 @@
-hello
+FUSE Operations
+1. getattr
+	we can call lstat at server side inside. We can cache the attrs as soon as dir is changed or FS is mounted.
+
+2. getxattr
+
+3. setxattr
+
+4. mknod
+
+5. create
+
+6. mkdir
+
+7. open
+
+8. read
+
+9. write
+
+10. opendir
+
+11. readdir (getdir)
+
+12. access
+
+13. chmod
+
+14. chown
+
+15. rmdir
+
+16. rename
+
+17. symlink
+
+18. link
+
+19. unlink
+
+
+Other system calls. May not be required
+readlink
+truncate
+utime
+statfs
+flush
+release
+listxattr
+removexattr
+releasedir
+init
+destroy
