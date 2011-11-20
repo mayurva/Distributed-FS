@@ -3,10 +3,13 @@ OBJ = client.o
 SRC = client.c
 OUT = server client
 CC = cc
-FLAGS = `pkg-config fuse --cflags --libs'
+#FLAGS = `pkg-config fuse --cflags --libs'
 
 all:
 	cc -g `pkg-config fuse --cflags --libs` client.c -o client
+
+temp:
+	cc -g `pkg-config fuse --cflags --libs` temp_fs.c -o temp_fs
 
 #all: $(OBJ) client server
 

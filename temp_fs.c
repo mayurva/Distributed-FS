@@ -30,8 +30,10 @@ static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
 	//server code goes here
 	fd = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
-	if
-		res = close(res);
+	if(fd >= 0)
+		fd = close(fd);
+	if(fd == -1)
+		return -errno;
 	return 0;
 }
 
@@ -174,7 +176,7 @@ static struct fuse_operations dfs_oper = {
 	.read		= (void *)dfs_read,
 	.write		= (void *)dfs_write,
 	.getdir		= (void *)dfs_getdir,
-	.access		= (void *)dfs_access,
+//	.access		= (void *)dfs_access,
 	.chmod		= (void *)dfs_chmod,
 	.chown		= (void *)dfs_chown,
 	.rmdir		= (void *)dfs_rmdir,
