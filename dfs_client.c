@@ -34,7 +34,10 @@ static struct fuse_operations dfsClient_oper = {
 
 int main(int argc, char *argv[])
 {
-	int i=umask(0);
-	printf("%x\n",i);
+	umask(0);
+	initClient(argc,argv);
+	for(i=2;i<argc;i++)
+		argv[i] = argv[i-1];
+	argc--;
 	return fuse_main(argc, argv, &dfsClient_oper);	
 }

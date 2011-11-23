@@ -7,7 +7,7 @@
 #include<ifaddrs.h>
 #include<net/if.h>
 #include<sys/time.h>
-#include"server.h"
+#include"dfs.h"
 
 int getRandom(int lower,int upper)
 {
@@ -88,7 +88,7 @@ void listenSocket(int soc)
 		printf("Listen for connection\n");
 	#endif
 
-        if(listen(soc,10) == -1) {
+        if(listen(soc,MAX_CLIENTS+2) == -1) {
                 printf("listen error\n");
                 exit(-1);
         }
