@@ -19,5 +19,4 @@ typedef struct server{
 extern rootpath;
 extern server s;
 extern client_info *clientList;
-extern client_info me;
 #endif
