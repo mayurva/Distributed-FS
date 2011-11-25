@@ -1,29 +1,27 @@
-INC = 
-OBJ = client.o
-SRC = client.c
-OUT = server client
+INC = dfs.h
+OBJ = client_util.o  dfs_client.o  dfs_server.o  server_util.o  tcp_utils.o
+CLI_SRC = client_util.c dfs_client.c tcp_utils.c
+SER_SRC = dfs_server.c server_util.c tcp_utils.c
+CLI_OUT = client
+SER_OUT = server
 CC = cc
-#FLAGS = `pkg-config fuse --cflags --libs'
 
-all:
-	cc -g `pkg-config fuse --cflags --libs` client.c -o client
+FLAGS = `pkg-config fuse --cflags --libs`
+
+
+all: client server
 
 temp:
-	cc -g `pkg-config fuse --cflags --libs` temp_fs.c -o temp_fs
+	$(CC) -g $(FLAGS) temp_fs.c -o temp_fs
 
-#all: $(OBJ) client server
+client:
+	$(CC) -g $(FLAGS) $(CLI_SRC) -o $(CLI_OUT)
 
-#$(OBJ): $(INC)
+server:
+	$(CC) -g $(FLAGS) $(SER_SRC) -o $(SER_OUT)
 	
-
-client: 
-	$(CC) -g $(FLAGS) cleint.c  -D_FILE_OFFSET_BITS=64
-
-server: 
-#	cc -o server server.o $(FLAGS)
-
 .PHONY: clean 
 clean:
-	rm -f $(OUT) $(OBJ)
+	rm -f $(CLI_OUT) $(SER_OUT)
 
 

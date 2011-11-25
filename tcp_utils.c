@@ -19,7 +19,7 @@ int getRandom(int lower,int upper)
 	return ((rand()%(upper-lower))+lower);
 }
 
-int populatePublicIp(server si)
+server populatePublicIp(server si)
 {
 
 	struct ifaddrs *myaddrs, *ifa;
@@ -116,7 +116,7 @@ int acceptConnection(int soc)
 	return conn_port;
 }
 
-int createConnection(server si,conn_socket)
+int createConnection(server si,int conn_socket)
 {
         struct sockaddr_in sock_client;
 	int slen = sizeof(sock_client);
@@ -125,12 +125,12 @@ int createConnection(server si,conn_socket)
         memset((char *) &sock_client, 0, sizeof(sock_client));
 	
 	#ifdef DEBUG
-		printf("Connecting to a server\nIP Addr: %s\nport: %d\n",si.ip_addr,si.listen_port);
+		printf("Connecting to a server\nIP Addr: %s\nport: %d\n",si.ip_addr,si.listen_soc);
 		printf("Connection socket is %d\n",conn_socket);
 	#endif
 
         sock_client.sin_family = AF_INET;
-        sock_client.sin_port = htons(si.listen_port);
+        sock_client.sin_port = htons(si.listen_soc);
 	ret = inet_pton(AF_INET, si.ip_addr, (void *) &sock_client.sin_addr);
 
 	ret = connect(conn_socket, (struct sockaddr *) &sock_client, slen);

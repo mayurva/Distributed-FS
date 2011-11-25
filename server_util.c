@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include"dfs.h"
 
 char *rootpath;
 server s;
@@ -8,11 +9,11 @@ client_info *clientList;
 
 void initServer()
 {
-	rootpath = get_current_dir_name();
+	rootpath = (char*)get_current_dir_name();
 	s = populatePublicIp(s);
 	s.listen_soc = createSocket();
 	bindSocket(s.listen_soc,LISTEN_PORT,s.ip_addr);
-	clientList = (clientList *)malloc(sizeof(clientInfo)*MAX_CLIENTS);
+	clientList = (client_info *)malloc(sizeof(client_info)*MAX_CLIENTS);
 	listenSocket(s.listen_soc);
 
 	#ifdef DEBUG
