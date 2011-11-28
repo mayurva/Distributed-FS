@@ -199,10 +199,12 @@ static int dfs_getdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t 
           exit(1);
         }
         tcp_buf[recFlag]='\0';
+	if(strcmp(tcp_buf,"end")==0)
+	  break;
         if (filler(buf, tcp_buf, &tempSt, 0))
           {
-        flag=0;
-        break;
+	    flag=0;
+	    break;
           }
       }
 //rest of the code goes here
