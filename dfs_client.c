@@ -12,17 +12,36 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 //client side code goes here
+
+//	struct stat *stbuf;
+        FILE *fp;
+        char *fname;
+
 	printf("Inside getattr Path is: %s\n",path);
 	memset(tcp_buf,0,MAXLEN);
-	strcpy(tcp_buf,"GETATTR\n");	
+	sprintf(tcp_buf,"GETATTR\n%s\n",path);
+	
+	//res=lstat(path,stbuf);
 
 //tcp code goes here
 	send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
-	recv(sock,tcp_buf,MAXLEN,0);
-
+	recv(sock,(char *)stbuf,sizeof(struct stat),0);
+	printf("Received stbuf\n");	
+	
 //rest of the code goes here
-	printf("Received message: %s\n",tcp_buf);	
+
+	res = lstat(path,stbuf);
+        fname=(char *)malloc(sizeof(char)*(strlen(path)+7));
+         
+        strcpy(fname,".");
+        strcat(fname,path);
+        strcat(fname,".attr");
+
+        fp=fopen(fname,"wb");
+        fwrite(stbuf,1,sizeof(struct stat),fp);
+	fclose(fp);
+
 	return 0;
 }
 
@@ -292,10 +311,10 @@ static struct fuse_operations dfs_oper = {
 int main(int argc, char *argv[])
 {
 	int i;
-	umask(0);
 	initClient(argc,argv);
 	for(i=1;i<argc;i++)
 		argv[i] = argv[i+1];
 	argc--;
+	umask(0);
 	return fuse_main(argc, argv, &dfs_oper);	
 }
