@@ -28,7 +28,7 @@ void* processClient(void* clientptr)
 		printf("%s\n",a);
 		if(strcmp(a,"GETATTR") == 0)
 		{
-			struct stat *stbuf;
+			struct stat stbuf;
 			int res;
 			printf("Received message is %s\n",a);
 			a = strtok(NULL,"\n");
@@ -38,19 +38,50 @@ void* processClient(void* clientptr)
 			strcat(path,a);
 			printf("Path is %s\n",path);
 			memset(tcp_buf,0,MAXLEN);
-			res=lstat(path,stbuf);
+			res=lstat(path,&stbuf);
+			printf("User id is %d\n",stbuf.st_uid);
 			printf("Sent stbuf\n");
-			send(clientList[n].conn_socket,(char*)stbuf,sizeof(struct stat),0);
+			send(clientList[n].conn_socket,(char*)&stbuf,sizeof(struct stat),0);
 		}
 		else if(strcmp(a,"MKNOD") == 0)
                 {
-                        printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
-			printf("Sent %s",tcp_buf);
-			pthread_mutex_lock(&send_mutex);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
-			pthread_mutex_unlock(&send_mutex);
+			mode_t mode;
+			dev_t rdev;
+			int res;
+                        
+			printf("Received message is %s\n",a);
+			a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(path,rootpath);
+			strcat(path,a);
+			printf("Path is %s\n",path);
+			
+			memset(tcp_buf,0,MAXLEN);
+			strcpy(tcp_buf,"ACK\n");
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+
+			recv(clientList[n].conn_socket,(char *)&mode,sizeof(mode_t),0);
+			printf("Received mode\n");
+			memset(tcp_buf,0,MAXLEN);
+			strcpy(tcp_buf,"ACK\n");
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+
+			recv(clientList[n].conn_socket,(char *)&rdev,sizeof(dev_t),0);
+			printf("Received dev\n");
+
+			if (S_ISREG(mode)) {
+				res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+				if (res >= 0)
+					res = close(res);
+			} else if (S_ISFIFO(mode))
+				res = mkfifo(path, mode);
+	 		else
+				res = mknod(path, mode, rdev);
+
+			memset(tcp_buf,0,MAXLEN);
+			sprintf(tcp_buf,"%d",res);
+			printf("Sent %s\n",tcp_buf);
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
                 }
                else if(strcmp(a,"MKDIR") == 0)
                 {
@@ -94,13 +125,42 @@ void* processClient(void* clientptr)
                 }
                else if(strcmp(a,"GETDIR") == 0)
                 {
-                        printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
-			printf("Sent %s",tcp_buf);
-			pthread_mutex_lock(&send_mutex);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
-			pthread_mutex_unlock(&send_mutex);
+                        struct stat stbuf;
+            int res;
+            printf("Received message is %s\n",a);
+            a = strtok(NULL,"\n");
+            path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+            strcpy(path,rootpath);
+            //strcat(path,"/");
+            strcat(path,a);
+            printf("Path is %s\n",path);
+            memset(tcp_buf,0,MAXLEN);
+            printf("Sent %s",tcp_buf);
+
+            DIR *dp;
+            struct dirent *de;
+
+            dp = opendir(path);
+            if (dp == NULL)
+              {
+                printf("Error during open dir");
+               // return -errno;
+              }
+            send(clientList[n].conn_socket,"Start",strlen("Start"),0);
+            recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+            while ((de = readdir(dp)) != NULL) {
+               struct stat st;
+              memset(&st, 0, sizeof(st));
+              st.st_ino = de->d_ino;
+              st.st_mode = de->d_type << 12;
+              send(clientList[n].conn_socket,(char*)&stbuf,sizeof(struct stat),0);
+              recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+              send(clientList[n].conn_socket,de->d_name,strlen(de->d_name),0);
+            }
+            /*send(clientList[n].conn_socket,(char*)&stbuf,sizeof(struct stat),0);
+              recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+              send(clientList[n].conn_socket,de->d_name,strlen(de->d_name),0);*/
+            closedir(dp);
                 }
                else if(strcmp(a,"ACCESS") == 0)
                 {

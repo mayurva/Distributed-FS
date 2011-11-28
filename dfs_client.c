@@ -13,7 +13,7 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	int res;
 //client side code goes here
 
-//	struct stat *stbuf;
+	struct stat temp_stbuf;
         FILE *fp;
         char *fname;
 
@@ -26,46 +26,79 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 //tcp code goes here
 	send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
-	recv(sock,(char *)stbuf,sizeof(struct stat),0);
+	recv(sock,(char *)&temp_stbuf,sizeof(struct stat),0);
 	printf("Received stbuf\n");	
 	
 //rest of the code goes here
 
+/*	stbuf = (struct stat*) malloc(sizeof(struct stat));
+	stbuf->st_dev = temp_stbuf.st_dev;
+	stbuf->st_ino = temp_stbuf.st_ino;
+	stbuf->st_mode = temp_stbuf.st_mode;
+	stbuf->st_nlink = temp_stbuf.st_nlink;
+	stbuf->st_uid = temp_stbuf.st_uid;
+	stbuf->st_gid = temp_stbuf.st_gid;
+	stbuf->st_rdev = temp_stbuf.st_rdev;
+	stbuf->st_size = temp_stbuf.st_size;
+	stbuf->st_blksize = temp_stbuf.st_blksize;
+	stbuf->st_blocks = temp_stbuf.st_blocks;
+	stbuf->st_atime = temp_stbuf.st_atime;
+	stbuf->st_mtime = temp_stbuf.st_mtime;
+	stbuf->st_ctime = temp_stbuf.st_ctime;
+*/
+//	printf("User id %d\n",stbuf->st_uid);
+//	char rootpath[1000] = "/home/mayur/Git Hub/Distributed-FS";
+//	if(strcmp(path,"/") == 0)
+//		strcpy(rootpath,"/home/mayur/Git Hub/Distributed-FS/tempfs");
+
 	res = lstat(path,stbuf);
-        fname=(char *)malloc(sizeof(char)*(strlen(path)+7));
-         
-        strcpy(fname,".");
-        strcat(fname,path);
-        strcat(fname,".attr");
 
-        fp=fopen(fname,"wb");
-        fwrite(stbuf,1,sizeof(struct stat),fp);
-	fclose(fp);
+//	printf("User id %d\n",stbuf->st_uid);
 
+        //fname=(char *)malloc(sizeof(char)*(strlen(path)+7));
+        //strcpy(fname,".");
+        //strcat(fname,path);
+        //strcat(fname,".attr");
+
+        //fp=fopen(fname,"wb");
+        //fwrite(&temp_stbuf,1,sizeof(struct stat),fp);
+	//fclose(fp);
+
+//	printf("End of getattr\n");
+	if(res == -1)
+		return -errno;
 	return 0;
 }
 
 static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
+	int res;
 	printf("Inside mknod Path is: %s\n",path);
 
 //client side code goes here
+
         memset(tcp_buf,0,MAXLEN);
-	strcpy(tcp_buf,"MKNOD\n");	
+	sprintf(tcp_buf,"MKNOD\n%s",path);	
+
 
 //tcp code goes here
 	send(sock,tcp_buf,strlen(tcp_buf),0);
-	memset(tcp_buf,0,MAXLEN);
 	recv(sock,tcp_buf,MAXLEN,0);
 
-//rest of the code goes here
-	printf("Received message: %s\n",tcp_buf);	
+	send(sock,(char*)&mode,strlen(tcp_buf),0);
+	recv(sock,tcp_buf,MAXLEN,0);
 
-	/*fd = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
-	if(fd >= 0)
-		fd = close(fd);
-	if(fd == -1)
-		return -errno*/;
+	send(sock,(char*)&rdev,strlen(tcp_buf),0);
+
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	printf("Received message: %s\n",tcp_buf);	
+	sscanf(tcp_buf,"%d",&res);
+
+//rest of the code goes here
+	if (res == -1)
+		return -errno;
+
 	return 0;
 }
 
@@ -135,22 +168,48 @@ static int dfs_write(const char *path, const char *buf, size_t size,off_t offset
         return 0;
 }
 
+
 static int dfs_getdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t offset, struct fuse_file_info *fi)
 {
 //client side code goes here
         printf("Inside getdir Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"GETDIR\n");
+    sprintf(tcp_buf,"GETDIR\n%s\n",path);
+
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
         memset(tcp_buf,0,MAXLEN);
-        recv(sock,tcp_buf,MAXLEN,0);
+        int recFlag=recv(sock,tcp_buf,MAXLEN,0);
+    if(recFlag<0){
+      printf("Error while receiving");
+      exit(1);
+    }
 
+        send(sock,"ok",strlen("ok"),0);
+    int flag=1;
+    while(1)
+      {
+        struct stat tempSt;
+        recv(sock,(char*)&tempSt,sizeof(struct stat),0);
+            send(sock,"ok",strlen("ok"),0);
+        int recFlag=recv(sock,tcp_buf,MAXLEN,0);
+        if(recFlag<0){
+          printf("Error while receiving");
+          exit(1);
+        }
+        tcp_buf[recFlag]='\0';
+        if (filler(buf, tcp_buf, &tempSt, 0))
+          {
+        flag=0;
+        break;
+          }
+      }
 //rest of the code goes here
-        printf("Received message: %s\n",tcp_buf);
+    //  printf("Received message: %s\n",tcp_buf);
         return 0;
 }
+
 
 static int dfs_access(const char *path, int mask)
 {
