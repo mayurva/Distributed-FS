@@ -3,7 +3,7 @@ OBJ = client_util.o  dfs_client.o  dfs_server.o  server_util.o  tcp_utils.o
 CLI_SRC = client_util.c dfs_client.c tcp_utils.c
 SER_SRC = dfs_server.c server_util.c tcp_utils.c
 CLI_OUT = client
-SER_OUT = server
+SER_OUT = server_dir/server
 CC = cc
 
 FLAGS = `pkg-config fuse --cflags --libs`
