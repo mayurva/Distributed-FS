@@ -34,14 +34,24 @@ void* processClient(void* clientptr)
 			a = strtok(NULL,"\n");
 			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
 			strcpy(path,rootpath);
-//			strcat(path,"/");
 			strcat(path,a);
 			printf("Path is %s\n",path);
 			memset(tcp_buf,0,MAXLEN);
 			res=lstat(path,&stbuf);
-			printf("User id is %d\n",stbuf.st_uid);
-			printf("Sent stbuf\n");
-			send(clientList[n].conn_socket,(char*)&stbuf,sizeof(struct stat),0);
+			if(res == -1)
+			{
+				sprintf(tcp_buf,"FAIL\n%d\n",errno);	
+				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);	
+			}
+			else
+			{
+				printf("User id is %d\n",stbuf.st_uid);
+				printf("Sent stbuf\n");
+				sprintf(tcp_buf,"SUCCESS\n");	
+				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+				recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+				send(clientList[n].conn_socket,(char*)&stbuf,sizeof(struct stat),0);
+			}
 		}
 		else if(strcmp(a,"MKNOD") == 0)
                 {

@@ -24,14 +24,29 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	//res=lstat(path,stbuf);
 
 //tcp code goes here
+	char *a;
 	send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	a = strtok(tcp_buf,"\n");
+	if(strcmp(a,"FAIL")==0)
+	{
+		printf("getattr failed\n");
+		a = strtok(NULL,"\n");
+		errno = atoi(a);
+		return -errno;
+	}
+
+	printf("%s\n",a);
+	memset(tcp_buf,0,MAXLEN);
+	strcpy(tcp_buf,"ACK\n");
+	send(sock,tcp_buf,strlen(tcp_buf),0);
 	recv(sock,(char *)&temp_stbuf,sizeof(struct stat),0);
 	printf("Received stbuf\n");	
 	
 //rest of the code goes here
 
-/*	stbuf = (struct stat*) malloc(sizeof(struct stat));
+//	stbuf = (struct stat*) malloc(sizeof(struct stat));
 	stbuf->st_dev = temp_stbuf.st_dev;
 	stbuf->st_ino = temp_stbuf.st_ino;
 	stbuf->st_mode = temp_stbuf.st_mode;
@@ -45,15 +60,15 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	stbuf->st_atime = temp_stbuf.st_atime;
 	stbuf->st_mtime = temp_stbuf.st_mtime;
 	stbuf->st_ctime = temp_stbuf.st_ctime;
-*/
-//	printf("User id %d\n",stbuf->st_uid);
-//	char rootpath[1000] = "/home/mayur/Git Hub/Distributed-FS";
-//	if(strcmp(path,"/") == 0)
-//		strcpy(rootpath,"/home/mayur/Git Hub/Distributed-FS/tempfs");
 
-	res = lstat(path,stbuf);
+	printf("User id %d\n",stbuf->st_uid);
+/*	char rootpath[1000] = "/home/mayur";
+	strcat(rootpath,path);
+	printf("Rootpath is %s\n",rootpath);
 
-//	printf("User id %d\n",stbuf->st_uid);
+	res = lstat(rootpath,stbuf);
+
+	printf("User id %d\n",stbuf->st_uid);*/
 
         //fname=(char *)malloc(sizeof(char)*(strlen(path)+7));
         //strcpy(fname,".");
@@ -64,9 +79,9 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
         //fwrite(&temp_stbuf,1,sizeof(struct stat),fp);
 	//fclose(fp);
 
-//	printf("End of getattr\n");
-	if(res == -1)
-		return -errno;
+	printf("End of getattr\n");
+//	if(res == -1)
+//		return -errno;
 	return 0;
 }
 
