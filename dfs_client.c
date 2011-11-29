@@ -135,19 +135,26 @@ static int dfs_mkdir(const char *path, mode_t mode)
 
 static int dfs_open(const char *path, struct fuse_file_info *fi)
 {
-//client side code goes here
         printf("Inside open Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"OPEN\n");
+        sprintf(tcp_buf,"OPEN\n%s",path);
 
 //tcp code goes here
+       
         send(sock,tcp_buf,strlen(tcp_buf),0);
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
+	
+        memset(tcp_buf,0,MAXLEN);
+	sprintf(tcp_buf,"%d",fi->flags);
+        send(sock,tcp_buf,strlen(tcp_buf),0);
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
 
-//rest of the code goes here
-        printf("Received message: %s\n",tcp_buf);
+	//	if(strcmp(tcp_buf,"success")!=0)
+	printf("\n%s\n",tcp_buf);
         return 0;
+
 }
 
 static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info *fi)
