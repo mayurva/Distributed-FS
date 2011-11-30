@@ -1,4 +1,3 @@
-#include<fuse.h>
 #include<stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -6,6 +5,7 @@
 #include"dfs.h"
 
 char tcp_buf[MAXLEN];
+char *a;
 
 //below is implementation of all FS functions. They should be split in client and server
 static int dfs_getattr(const char *path, struct stat *stbuf)
@@ -20,14 +20,16 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	printf("Inside getattr Path is: %s\n",path);
 	memset(tcp_buf,0,MAXLEN);
 	sprintf(tcp_buf,"GETATTR\n%s\n",path);
-	
+	printf("path copied\n%s\n",tcp_buf);	
 	//res=lstat(path,stbuf);
 
 //tcp code goes here
-	char *a;
 	send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
 	recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n");
+	
+
 	a = strtok(tcp_buf,"\n");
 	if(strcmp(a,"FAIL")==0)
 	{
@@ -93,7 +95,7 @@ static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 //client side code goes here
 
         memset(tcp_buf,0,MAXLEN);
-	sprintf(tcp_buf,"MKNOD\n%s",path);	
+	sprintf(tcp_buf,"MKNOD\n%s\n",path);	
 
 
 //tcp code goes here
@@ -119,18 +121,26 @@ static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
 static int dfs_mkdir(const char *path, mode_t mode)
 {
+	int res;
 //client side code goes here
-        printf("Inside mknod Path is: %s\n",path);
+        printf("Inside mkdir Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"MKNOD\n");
+        sprintf(tcp_buf,"MKDIR\n%s\n",path);    
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
+        recv(sock,tcp_buf,MAXLEN,0);
+
+        send(sock,(char*)&mode,strlen(tcp_buf),0);
+
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
-//rest of the code goes here
-        printf("Received message: %s\n",tcp_buf);
-        return 0;
+        printf("Received message: %s\n",tcp_buf);       
+
+	a = strtok(tcp_buf,"\n");
+	a = strtok(tcp_buf,"\n");
+	res = atoi(a);	
+        return res;
 }
 
 static int dfs_open(const char *path, struct fuse_file_info *fi)
@@ -157,20 +167,129 @@ static int dfs_open(const char *path, struct fuse_file_info *fi)
 
 }
 
+void writeToFile(FILE *fp,blocks *temp)
+{
+  printf("writing to file");fflush(stdout);
+  printf("%d",temp->blockNumber);fflush(stdout);
+  //	 sleep(5);
+  fwrite(temp,sizeof(blocks),1,fp);
+}
+
+int searchFile(int a)
+{
+  return(0);
+}
+
 static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info *fi)
 {
-//client side code goes here
-        printf("Inside read Path is: %s\n",path);
+  printf("Inside read. Path is: %s buf is %s",path,buf);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"READ\n");
+        sprintf(tcp_buf,"READ\n%s",path);
 
+	char cacheFile[100];
+	char *tempBuf;
+	tempBuf=(char *)malloc(sizeof(char)*(int)size);
+	FILE *fd;
+	int recvflag;
+	strcpy(cacheFile,".");
+	strcat(cacheFile,path);
+	strcat(cacheFile,".cache");
+	fd=fopen(cacheFile,"ab+");
+	//	printf("cacheFile %s",cacheFile);fflush(stdout);
 //tcp code goes here
+       
         send(sock,tcp_buf,strlen(tcp_buf),0);
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
+	
+        memset(tcp_buf,0,MAXLEN);
+	sprintf(tcp_buf,"%d",fi->flags);
+        send(sock,tcp_buf,strlen(tcp_buf),0);
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	
+	if(strcmp(tcp_buf,"success")==0)
+	  {
 
-//rest of the code goes here
-        printf("Received message: %s\n",tcp_buf);
+	    memset(tcp_buf,0,MAXLEN);
+	    sprintf(tcp_buf,"%d",(int)offset);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    strcpy(tempBuf,"");
+	    int nsize,noff;
+	    noff=(int)offset/BLOCKSIZE;
+	    nsize=(int)size/BLOCKSIZE;
+
+	     
+	     //printf("\n\nnoff %d offset %d\nnsize %d size %d",noff,(int)offset,nsize,(int)size);fflush(stdout);
+	    int i;
+	    for(i=1;i<nsize;i++)
+	      {
+		if(searchFile(i+noff)==1)
+		  {
+
+
+		  }
+		else
+		  {
+		  
+		    memset(tcp_buf,0,MAXLEN);
+		    recvflag=recv(sock,tcp_buf,MAXLEN,0);
+		    if(recvflag<0)
+		      {
+			printf("Receiving error");
+			exit(0);
+		      }
+		
+		    //if(i==nsize-1)
+		    // tcp_buf[recvflag]='\0';
+		    //strcat(
+		    //tcp_buf[recvflag]='\0';
+		
+		    //tcp_buf[recvflag]='\0';
+		
+		    blocks *temp;
+		    temp=(blocks *)malloc(sizeof(blocks));
+		    temp->blockNumber=noff+i;
+		    strcpy(temp->blockData,tcp_buf);
+		    temp->blockData[recvflag]='\0';
+		    writeToFile(fd,temp);
+		    //	printf("tcp_buf %s",tcp_buf);fflush(stdout);
+
+		    if(recvflag<BLOCKSIZE){
+		      //tcp_buf[recvflag]='\0';
+		      send(sock,"next",strlen("next"),0);
+		      printf("next\ni is %d and nsize is %d\n",i,nsize);		  
+		      break;
+		    }
+		    else
+		      {
+			strcat(tempBuf,tcp_buf);
+		      }
+		
+
+		    memset(tcp_buf,0,MAXLEN);
+		    if(i!=nsize-1)
+		      {
+			send(sock,"ok",strlen("ok"),0);
+			printf("ok\ni is %d and nsize is%d\n",i,nsize);
+		      }
+		    else
+		      {
+			send(sock,"next",strlen("next"),0);
+			printf("next\ni is %d and nsize is %d\n",i,nsize);
+		      }
+		    fflush(stdout);
+		    //sleep(1);
+		  }
+	      }
+	  }
+	else
+	  printf("\n%s\n",tcp_buf);
+	strcat(tempBuf,tcp_buf);
+	sprintf(buf,"%s",tempBuf);
+	
+	printf("%shere5",buf);fflush(stdout);
+	fclose(fd);
         return 0;
 }
 
@@ -237,10 +356,11 @@ static int dfs_getdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t 
 
 static int dfs_access(const char *path, int mask)
 {
+	int res;
 //client side code goes here
         printf("Inside access Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"ACCESS\n");
+        sprintf(tcp_buf,"ACCESS\n%s\n%d",path,mask);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -249,41 +369,63 @@ static int dfs_access(const char *path, int mask)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+	a = strtok(tcp_buf,"\n");
+	a = strtok(NULL,"\n");
+	res = atoi(a);
+        return res;
 }
 
 static int dfs_chmod(const char *path, mode_t mode)
 {
+
+        int res;
 //client side code goes here
         printf("Inside chmod Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"CHMOD\n");
+        sprintf(tcp_buf,"CHMOD\n%s\n",path);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
-        memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
 
-//rest of the code goes here
+        send(sock,(char*)&mode,strlen(tcp_buf),0);
+
+        memset(tcp_buf,0,MAXLEN);
+        recv(sock,tcp_buf,MAXLEN,0);
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+	printf("res is %d\n",res);
+        return res;
 }
 
 static int dfs_chown(const char *path, uid_t uid, gid_t gid)
 {
+
+        int res;
 //client side code goes here
         printf("Inside chown Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"CHOWN\n");
+        sprintf(tcp_buf,"CHOWN\n%s\n",path);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
-        memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
 
-//rest of the code goes here
+        send(sock,(char*)&uid,strlen(tcp_buf),0);
+        recv(sock,tcp_buf,MAXLEN,0);
+        send(sock,(char*)&gid,strlen(tcp_buf),0);
+
+        memset(tcp_buf,0,MAXLEN);
+        recv(sock,tcp_buf,MAXLEN,0);
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
 }
 
 static int dfs_rmdir(const char *path)
@@ -379,8 +521,8 @@ static struct fuse_operations dfs_oper = {
 .open = (void *)dfs_open,
 .read = (void *)dfs_read,
 .write = (void *)dfs_write,
-.getdir = (void *)dfs_getdir,
-// .access = (void *)dfs_access,
+.readdir = (void *)dfs_getdir,
+.access = (void *)dfs_access,
 .chmod = (void *)dfs_chmod,
 .chown = (void *)dfs_chown,
 .rmdir = (void *)dfs_rmdir,
@@ -399,5 +541,5 @@ int main(int argc, char *argv[])
 		argv[i] = argv[i+1];
 	argc--;
 	umask(0);
-	return fuse_main(argc, argv, &dfs_oper);	
+	return fuse_main(argc, argv, &dfs_oper, NULL);	
 }

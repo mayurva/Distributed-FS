@@ -1,7 +1,7 @@
 #ifndef DFS
 #define DFS
 
-//#define FUSE_USE_VERSION 26
+#define FUSE_USE_VERSION 26
 
 #include<pthread.h>
 #include<fuse.h>
@@ -18,7 +18,16 @@
 #define DEBUG
 #define MAX_CLIENTS 10
 #define LISTEN_PORT 5000
-#define MAXLEN 1000
+#define MAXLEN 1030
+
+#define BLOCKSIZE 1024
+
+typedef struct blocks
+{
+  int blockNumber;
+  char blockData[BLOCKSIZE];
+}blocks;
+
 
 typedef struct client_info_{
 	int id;

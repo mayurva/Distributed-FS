@@ -1,28 +1,30 @@
 FUSE Operations
-1. getattr
+1. getattr almost done.. caching is to be implemented
 	we can call lstat at server side inside. We can cache the attrs for a dir as soon as dir is changed or FS is mounted.
 
-2. mknod
+2. mknod	recheck.. almost done
 	
-3. mkdir
+3. mkdir	done.. need to test...
 
-4. open
+4. open		done.. need to test...
 
-5. read
+5. read		kamat saheb working
 
-6. write
+6. write	kamat saheb working
 
-8. readdir (getdir)
+8. readdir (getdir)	done.. need to test
 
-9. access
+9. access	done
 
-10. chmod
+10. chmod	single client non-cached implementation --done
 
-11. chown
+11. chown	single client non-cached implementation --done
 
-12. rmdir
 
-13. rename
+
+12. rmdir	single client non-cached implementation
+
+13. rename	single client non-cached implementation
 
 14. symlink
 
@@ -30,21 +32,22 @@ FUSE Operations
 
 16. unlink
 
+
 Some other system calls, not sure if we need them
 getxattr
 setxattr
 create
-opendir
-statfs
+utime
 readlink
-truncate
-init
 
 few more.. which we may not require at all
-utime
 flush
 release
 listxattr
 removexattr
 releasedir
 destroy
+opendir
+statfs
+truncate
+init
