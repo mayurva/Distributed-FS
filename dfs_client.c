@@ -430,10 +430,11 @@ static int dfs_chown(const char *path, uid_t uid, gid_t gid)
 
 static int dfs_rmdir(const char *path)
 {
+	int res;
 //client side code goes here
-        printf("Inside rmdir Path is: %s\n",path);
+        printf("Inside rmdir path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"RMDIR\n");
+        sprintf(tcp_buf,"RMDIR\n%s\n",path);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -442,15 +443,19 @@ static int dfs_rmdir(const char *path)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
 }
 
 static int dfs_rename(const char *from, const char *to)
 {
+	int res;
 //client side code goes here
         printf("Inside rename Path is: %s\n",from);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"RENAME\n");
+        sprintf(tcp_buf,"RENAME\n%s\n%s\n",from,to);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -459,15 +464,19 @@ static int dfs_rename(const char *from, const char *to)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
 }
 
 static int dfs_symlink(const char *from, const char *to)
 {
+	int res;
 //client side code goes here
         printf("Inside symlink Path is: %s\n",from);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"SYMLINK\n");
+        sprintf(tcp_buf,"SYMLINK\n%s\n%s\n",from,to);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -476,15 +485,19 @@ static int dfs_symlink(const char *from, const char *to)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
 }
 
 static int dfs_link(const char *from, const char *to)
-{
+{ 
+	int res;
 //client side code goes here
         printf("Inside link Path is: %s\n",from);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"LINK\n");
+        sprintf(tcp_buf,"LINK\n%s\n%s\n",from,to);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -493,15 +506,19 @@ static int dfs_link(const char *from, const char *to)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
 }
 
 static int dfs_unlink(const char *path)
 {
+	int res;
 //client side code goes here
-        printf("Inside unlink Path is: %s\n",path);
+        printf("Inside unlink path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"UNLINK\n");
+        sprintf(tcp_buf,"UNLINK\n%s\n",path);
 
 //tcp code goes here
         send(sock,tcp_buf,strlen(tcp_buf),0);
@@ -510,7 +527,16 @@ static int dfs_unlink(const char *path)
 
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
-        return 0;
+        a = strtok(tcp_buf,"\n");
+        a = strtok(tcp_buf,"\n");
+        res = atoi(a);
+        return res;
+}
+
+static int dfs_flush(const char *path, struct fuse_file_info *fi)
+{
+	//will be called when close is called on the file specified by path.
+	//Write back the cached data and delete the cache files
 }
 
 //below is client code
@@ -530,7 +556,7 @@ static struct fuse_operations dfs_oper = {
 .symlink = (void *)dfs_symlink,
 .link = (void *)dfs_link,
 .unlink = (void *)dfs_unlink,
- 
+.flush = (void*)dfs_flush, 
 };
 
 int main(int argc, char *argv[])

@@ -378,43 +378,143 @@ void* processClient(void* clientptr)
                 }
                else if(strcmp(a,"RMDIR") == 0)
                 {
+                        char *path;
+                        int res;
+
                         printf("Received message is %s\n",a);
+                        a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+                        strcpy(path,rootpath);
+                        strcat(path,a);
+
+                        res = rmdir(path);
                         memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
-			printf("Sent %s",tcp_buf);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+                        if (res == -1)
+                                sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+                        else
+                                sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+                        send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+                        memset(tcp_buf,0,MAXLEN);
+                        printf("Sent %s",tcp_buf);
+                        free(path);
                 }
                else if(strcmp(a,"RENAME") == 0)
                 {
+			char *from;
+			char *to;
+			int res;	
+		
                         printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
+			a = strtok(NULL,"\n");
+			from = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+                        strcpy(from,rootpath);
+                        strcat(from,a);
+			printf("from is\n%s\n",from);
+			a = strtok(NULL,"\n");
+			to = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+                        strcpy(to,rootpath);
+                        strcat(to,a);
+			printf("to is\n%s\n",to);
+
+			res = rename(from, to);
+			memset(tcp_buf,0,MAXLEN);
+                        if (res == -1)
+				sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+                        else
+				sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+                        send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			memset(tcp_buf,0,MAXLEN);
 			printf("Sent %s",tcp_buf);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			free(from);
+			free(to);
                 }
                else if(strcmp(a,"SYMLINK") == 0)
                 {
-                        printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
+			char *from;
+			char *to;
+			int res;
+
+			printf("Received message is %s\n",a);
+			a = strtok(NULL,"\n");
+			from = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(from,rootpath);
+			strcat(from,a);
+			printf("from is\n%s\n",from);
+			a = strtok(NULL,"\n");
+			to = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(to,rootpath);
+			strcat(to,a);
+			printf("to is\n%s\n",to);
+
+                        res = symlink(from, to);
+			memset(tcp_buf,0,MAXLEN);
+			if (res == -1)
+				sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+			else
+				sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			memset(tcp_buf,0,MAXLEN);
 			printf("Sent %s",tcp_buf);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			free(from);
+			free(to);
                 }
                else if(strcmp(a,"LINK") == 0)
                 {
-                        printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
+
+			char *from;
+			char *to;
+			int res;
+
+			printf("Received message is %s\n",a);
+			a = strtok(NULL,"\n");
+			from = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(from,rootpath);
+			strcat(from,a);
+			printf("from is\n%s\n",from);
+			a = strtok(NULL,"\n");
+			to = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(to,rootpath);
+			strcat(to,a);
+			printf("to is\n%s\n",to);
+
+			res = link(from, to);
+			memset(tcp_buf,0,MAXLEN);
+			if (res == -1)
+				sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+			else
+				sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			memset(tcp_buf,0,MAXLEN);
 			printf("Sent %s",tcp_buf);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			free(from);
+			free(to);
                 }
                else if(strcmp(a,"UNLINK") == 0)
                 {
-                        printf("Received message is %s\n",a);
-                        memset(tcp_buf,0,MAXLEN);
-                        strcpy(tcp_buf,"ACK\n");
+			char *path;
+			int res;
+
+			printf("Received message is %s\n",a);
+			a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(path,rootpath);
+			strcat(path,a);
+
+                        res = unlink(path);
+			memset(tcp_buf,0,MAXLEN);
+			if (res == -1)
+				sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+			else
+				sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			memset(tcp_buf,0,MAXLEN);
 			printf("Sent %s",tcp_buf);
-				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			free(path);
                 }
 		
 	}
