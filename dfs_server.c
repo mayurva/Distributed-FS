@@ -184,7 +184,7 @@ void* processClient(void* clientptr)
 		    {
 		      send(clientList[n].conn_socket,"success",strlen("success"),0);
 		      memset(tcp_buf,0,MAXLEN);
-		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      res=(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
 		      if(res<0){
 			printf("\nError receiving flags");
 			exit(1);
@@ -378,7 +378,7 @@ void* processClient(void* clientptr)
 			int res;
                         mode_t mode;
 
-                        printf("Received message is %s\n",a);
+			printf("Received message is %s\n",a);
 
 			a = strtok(NULL,"\n");
                         path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
@@ -682,6 +682,94 @@ void* processClient(void* clientptr)
                         send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
 			memset(tcp_buf,0,MAXLEN);
 			free(path);
+		}
+		else if(strcmp(a,"SETXATTR") == 0)
+		{
+			char *name;
+			char *value;
+			int flags;
+			size_t size;
+			printf("Received message is %s\n",a);
+
+			a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(path,rootpath);
+			strcat(path,a);
+                        printf("Path is %s\n",path);
+
+			a = strtok(NULL,"\n");
+			name = (char*)malloc(strlen(a)+1);
+			strcpy(name,a);
+                        printf("name is %s\n",name);
+
+			a = strtok(NULL,"\n");
+			value = (char*)malloc(strlen(a)+1);
+			strcpy(value,a);
+                        printf("value is %s\n",value);
+
+			a = strtok(NULL,"\n");
+			flags = atoi(a);
+
+                        memset(tcp_buf,0,MAXLEN);
+                        strcpy(tcp_buf,"ACK\n");
+                        printf("Sent %s",tcp_buf);
+                        send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+
+                        recv(clientList[n].conn_socket,(char *)&size,sizeof(size_t),0);
+                        printf("Received size\n");
+			fflush(stdout);
+                        
+			int res = lsetxattr(path, name, value, size, flags);
+
+			memset(tcp_buf,0,MAXLEN);
+                        if (res == -1)
+                                sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+                        else
+                                sprintf(tcp_buf,"SUCCESS\n%d\n",0);
+
+                        send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			memset(tcp_buf,0,MAXLEN);
+			free(path);
+			free(name);
+			free(value);
+		}
+		else if(strcmp(a,"GETXATTR") == 0)
+                {
+			char *name;
+			char *value;
+			int flags;
+			size_t size;
+			printf("Received message is %s\n",a);
+
+			a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(path,rootpath);
+			strcat(path,a);
+                        printf("Path is %s\n",path);
+
+			a = strtok(NULL,"\n");
+			name = (char*)malloc(strlen(a)+1);
+			strcpy(name,a);
+                        printf("name is %s\n",name);
+			memset(tcp_buf,0,MAXLEN);
+
+			int res = lgetxattr(path, name, value, size);
+                        if (res == -1)
+			{
+				sprintf(tcp_buf,"FAIL\n%d\n",-errno);
+				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			}
+                        else
+			{
+				sprintf(tcp_buf,"SUCCESS\n%d\n%s\n",0,value);
+				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+				recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+				send(clientList[n].conn_socket,(char*)&size,sizeof(size_t),0);
+			}
+
+			memset(tcp_buf,0,MAXLEN);
+			free(path);
+			free(name);
 		}
 		}
 	}

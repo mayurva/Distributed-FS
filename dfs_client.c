@@ -83,10 +83,10 @@ static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 	send(sock,tcp_buf,strlen(tcp_buf),0);
 	recv(sock,tcp_buf,MAXLEN,0);
 
-	send(sock,(char*)&mode,strlen(tcp_buf),0);
+	send(sock,(char*)&mode,sizeof(mode_t),0);
 	recv(sock,tcp_buf,MAXLEN,0);
 
-	send(sock,(char*)&rdev,strlen(tcp_buf),0);
+	send(sock,(char*)&rdev,sizeof(dev_t),0);
 
 	memset(tcp_buf,0,MAXLEN);
 	recv(sock,tcp_buf,MAXLEN,0);
@@ -112,7 +112,7 @@ static int dfs_mkdir(const char *path, mode_t mode)
         send(sock,tcp_buf,strlen(tcp_buf),0);
         recv(sock,tcp_buf,MAXLEN,0);
 
-        send(sock,(char*)&mode,strlen(tcp_buf),0);
+        send(sock,(char*)&mode,sizeof(mode_t),0);
 
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
@@ -412,7 +412,7 @@ static int dfs_chmod(const char *path, mode_t mode)
         send(sock,tcp_buf,strlen(tcp_buf),0);
         recv(sock,tcp_buf,MAXLEN,0);
 
-        send(sock,(char*)&mode,strlen(tcp_buf),0);
+        send(sock,(char*)&mode,sizeof(mode_t),0);
 
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
@@ -438,9 +438,9 @@ static int dfs_chown(const char *path, uid_t uid, gid_t gid)
         send(sock,tcp_buf,strlen(tcp_buf),0);
         recv(sock,tcp_buf,MAXLEN,0);
 
-        send(sock,(char*)&uid,strlen(tcp_buf),0);
+        send(sock,(char*)&uid,sizeof(uid_t),0);
         recv(sock,tcp_buf,MAXLEN,0);
-        send(sock,(char*)&gid,strlen(tcp_buf),0);
+        send(sock,(char*)&gid,sizeof(uid_t),0);
 
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
@@ -626,6 +626,65 @@ static int dfs_readlink(const char *path, char *buf, size_t size)
 	printf("readlink ends\n");
 	return res;
 }
+static int dfs_setxattr(const char *path, const char *name, const char *value, size_t size, int flags)
+{
+	int res;
+//client side code goes here
+	printf("Inside setxattr Path is: %s\n",path);
+	memset(tcp_buf,0,MAXLEN);
+	sprintf(tcp_buf,"SETXATTR\n%s\n%s\n%s\n%d\n",path,name,value,flags);    
+
+//tcp code goes here
+	send(sock,tcp_buf,strlen(tcp_buf),0);
+	recv(sock,tcp_buf,MAXLEN,0);
+
+	send(sock,(char*)&size,sizeof(size_t),0);
+
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	printf("Received message: %s\n",tcp_buf);       
+
+	a = strtok(tcp_buf,"\n");
+	a = strtok(NULL,"\n");
+	res = atoi(a);
+	printf("End of setxattr\n");	
+	return res;
+}
+
+static int dfs_getxattr(const char *path, const char *name, char *value, size_t size)
+{
+	char *b;
+	int res;
+//client side code goes here
+        printf("Inside getxattr Path is: %s\n",path);
+        memset(tcp_buf,0,MAXLEN);
+        sprintf(tcp_buf,"GETXATTR\n%s\n%s\n",path,name);    
+
+//tcp code goes here
+        send(sock,tcp_buf,strlen(tcp_buf),0);
+
+        memset(tcp_buf,0,MAXLEN);
+        recv(sock,tcp_buf,MAXLEN,0);
+        printf("Received message: %s\n",tcp_buf);       
+
+	a = strtok(tcp_buf,"\n");
+	b = strtok(NULL,"\n");
+	res = atoi(b);
+	value = NULL;
+	size = 0;
+	if(strcmp(a,"SUCCESS")==0)
+	{
+		a=strtok(NULL,"\n");
+		value = malloc(sizeof(char)*strlen(a)+1);
+		strcpy(value,a);
+		send(sock,"ACK\n",strlen("ACK\n"),0);
+	        recv(sock,(char*)&size,sizeof(size_t),0);
+	}
+
+	printf("End of getxattr\n");	
+        return res;
+}
+
 
 //below is client code
 static struct fuse_operations dfs_oper = {
@@ -647,6 +706,8 @@ static struct fuse_operations dfs_oper = {
 .flush = (void*)dfs_flush, 
 .utimens = (void*)dfs_utimens,
 .readlink = (void*)dfs_readlink,
+.getxattr = (void*)dfs_getxattr,
+.setxattr = (void*)dfs_setxattr,
 };
 
 int main(int argc, char *argv[])
