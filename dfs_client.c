@@ -48,7 +48,6 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	
 //rest of the code goes here
 
-//	stbuf = (struct stat*) malloc(sizeof(struct stat));
 	stbuf->st_dev = temp_stbuf.st_dev;
 	stbuf->st_ino = temp_stbuf.st_ino;
 	stbuf->st_mode = temp_stbuf.st_mode;
@@ -63,27 +62,9 @@ static int dfs_getattr(const char *path, struct stat *stbuf)
 	stbuf->st_mtime = temp_stbuf.st_mtime;
 	stbuf->st_ctime = temp_stbuf.st_ctime;
 
-	printf("User id %d\n",stbuf->st_uid);
-/*	char rootpath[1000] = "/home/mayur";
-	strcat(rootpath,path);
-	printf("Rootpath is %s\n",rootpath);
-
-	res = lstat(rootpath,stbuf);
-
-	printf("User id %d\n",stbuf->st_uid);*/
-
-        //fname=(char *)malloc(sizeof(char)*(strlen(path)+7));
-        //strcpy(fname,".");
-        //strcat(fname,path);
-        //strcat(fname,".attr");
-
-        //fp=fopen(fname,"wb");
-        //fwrite(&temp_stbuf,1,sizeof(struct stat),fp);
-	//fclose(fp);
+//	printf("User id %d\n",stbuf->st_uid);
 
 	printf("End of getattr\n");
-//	if(res == -1)
-//		return -errno;
 	return 0;
 }
 
@@ -115,7 +96,7 @@ static int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
 //rest of the code goes here
 	if (res == -1)
 		return -errno;
-
+	printf("End of mknod\n");
 	return 0;
 }
 
@@ -138,8 +119,9 @@ static int dfs_mkdir(const char *path, mode_t mode)
         printf("Received message: %s\n",tcp_buf);       
 
 	a = strtok(tcp_buf,"\n");
-	a = strtok(tcp_buf,"\n");
-	res = atoi(a);	
+	a = strtok(NULL,"\n");
+	res = atoi(a);
+	printf("End of mkdir\n");	
         return res;
 }
 
@@ -163,6 +145,7 @@ static int dfs_open(const char *path, struct fuse_file_info *fi)
 
 	//	if(strcmp(tcp_buf,"success")!=0)
 	printf("\n%s\n",tcp_buf);
+	printf("End of open\n");
         return 0;
 
 }
@@ -290,6 +273,7 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struc
 	
 	printf("%shere5",buf);fflush(stdout);
 	fclose(fd);
+	printf("End of read\n");
         return 0;
 }
 
@@ -349,7 +333,6 @@ static int dfs_getdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t 
           }
       }
 //rest of the code goes here
-    //  printf("Received message: %s\n",tcp_buf);
         return 0;
 }
 
@@ -395,7 +378,7 @@ static int dfs_chmod(const char *path, mode_t mode)
         printf("Received message: %s\n",tcp_buf);
 
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
 	printf("res is %d\n",res);
         return res;
@@ -423,7 +406,7 @@ static int dfs_chown(const char *path, uid_t uid, gid_t gid)
         printf("Received message: %s\n",tcp_buf);
 
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
         return res;
 }
@@ -444,8 +427,9 @@ static int dfs_rmdir(const char *path)
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
+	printf("rmdir ends\n");
         return res;
 }
 
@@ -465,8 +449,9 @@ static int dfs_rename(const char *from, const char *to)
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
+	printf("rename ends\n");
         return res;
 }
 
@@ -486,8 +471,9 @@ static int dfs_symlink(const char *from, const char *to)
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
+	printf("symlink ends\n");
         return res;
 }
 
@@ -507,8 +493,9 @@ static int dfs_link(const char *from, const char *to)
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
+	printf("link ends\n");
         return res;
 }
 
@@ -528,8 +515,9 @@ static int dfs_unlink(const char *path)
 //rest of the code goes here
         printf("Received message: %s\n",tcp_buf);
         a = strtok(tcp_buf,"\n");
-        a = strtok(tcp_buf,"\n");
+        a = strtok(NULL,"\n");
         res = atoi(a);
+	printf("unlink ends\n");
         return res;
 }
 
@@ -537,6 +525,65 @@ static int dfs_flush(const char *path, struct fuse_file_info *fi)
 {
 	//will be called when close is called on the file specified by path.
 	//Write back the cached data and delete the cache files
+	return 0;
+}
+
+static int dfs_utimens(const char *path, const struct timespec ts[2])
+{
+	int res;
+
+	//client side code goes here
+	printf("Inside utime Path is: %s\n",path);
+        memset(tcp_buf,0,MAXLEN);
+        sprintf(tcp_buf,"UTIME\n%s\n",path);
+
+//tcp code goes here
+	send(sock,tcp_buf,strlen(tcp_buf),0);
+	recv(sock,tcp_buf,MAXLEN,0);
+
+	send(sock,(char*)&ts[0],sizeof(struct timespec),0);
+	recv(sock,tcp_buf,MAXLEN,0);
+	send(sock,(char*)&ts[1],sizeof(struct timespec),0);
+
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	printf("Received message: %s\n",tcp_buf);
+
+	a = strtok(tcp_buf,"\n");
+	a = strtok(NULL,"\n");
+	res = atoi(a);
+	printf("utimens ends\n");
+	return res;
+}
+static int dfs_readlink(const char *path, char *buf, size_t size)
+{
+	int res;
+//client side code goes here
+	printf("Inside readlink Path is: %s\n",path);
+	memset(tcp_buf,0,MAXLEN);
+	sprintf(tcp_buf,"READLINK\n%s\n",path);
+
+//tcp code goes here
+	send(sock,tcp_buf,strlen(tcp_buf),0);
+	recv(sock,tcp_buf,MAXLEN,0);
+
+	send(sock,(char*)&size,sizeof(size_t),0);
+
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	printf("Received message: %s\n",tcp_buf);
+
+	a = strtok(tcp_buf,"\n");
+	if(strcmp(a,"SUCCESS")==0)
+	{
+		a=strtok(NULL,"\n");
+		strcpy(buf,a);
+	}
+	a = strtok(NULL,"\n");
+	res = atoi(a);
+
+	printf("readlink ends\n");
+	return res;
 }
 
 //below is client code
@@ -557,6 +604,8 @@ static struct fuse_operations dfs_oper = {
 .link = (void *)dfs_link,
 .unlink = (void *)dfs_unlink,
 .flush = (void*)dfs_flush, 
+.utimens = (void*)dfs_utimens,
+.readlink = (void*)dfs_readlink,
 };
 
 int main(int argc, char *argv[])

@@ -1,45 +1,56 @@
 FUSE Operations
 
-1. getattr almost done.. caching is to be implemented
+done and dusted...
+3. mkdir	
 
-2. mknod	recheck.. almost done.. not sure how to test
-	
-3. mkdir	done.. 
+9. access	
 
-4. open		done.. need to test...
+15. rmdir	
 
-5. read		kamat saheb working
+16. symlink		
 
-6. write	kamat saheb working
+17. link	
+
+18. unlink
+
+19. readlink	
+
+
+implement caching 2hr
+1. getattr	almost done.. caching is to be implemented
 
 8. readdir (getdir)	done..think about caching 
 
-9. access	done
+
+waiting on testing
+2. mknod	recheck.. almost done.. not sure how to test
 
 10. chmod	single client non-cached implementation --done -- not working fix it
 
 11. chown	single client non-cached implementation --done --how to test?
 
-12. create	do now
+13. utime	done... result out of range error.. check out
 
-13. utime	do now
+14. rename	done... how to test?
 
-14. rename	done... need to test	
 
-15. rmdir	done.. need to test..
+with kamat saheb
+	
+4. open		done.. need to test...
 
-16. symlink	done... need to test	
+5. read		some issue after completion.. server keeps on receiving messages	
 
-17. link	done... need to test
+6. write	finish today	
 
-18. unlink	done... need to test
+12. create	To Do
 
 19. flush
+
+
 
 Some other system calls, not sure if we need them
 getxattr
 setxattr
-readlink
 
 flush
 release
