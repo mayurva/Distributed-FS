@@ -11,8 +11,8 @@ FLAGS = `pkg-config fuse --cflags --libs`
 
 all: client server
 
-temp:
-	$(CC) -g $(FLAGS) temp_fs.c -o temp_fs
+postmark:
+	$(CC) postmark.c -o postmark
 
 client:
 	$(CC) -g $(FLAGS) $(CLI_SRC) -o $(CLI_OUT)
@@ -22,6 +22,6 @@ server:
 	
 .PHONY: clean 
 clean:
-	rm -f $(CLI_OUT) $(SER_OUT)
+	rm -f $(CLI_OUT) $(SER_OUT) postmark
 
 

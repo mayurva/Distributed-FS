@@ -298,12 +298,14 @@ static int dfs_write(const char *path, const char *buf, size_t size,off_t offset
         send(sock,tcp_buf,strlen(tcp_buf),0);
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n%s\n",tcp_buf);
 	
         memset(tcp_buf,0,MAXLEN);
 	sprintf(tcp_buf,"%d",fi->flags);
         send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
 	recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd (this should be success)\n%s\n",tcp_buf);
 	
 	if(strcmp(tcp_buf,"success")==0)
 	  {
@@ -315,15 +317,18 @@ static int dfs_write(const char *path, const char *buf, size_t size,off_t offset
 	    int nsize,noff;
 	    noff=(int)offset/BLOCKSIZE;
 	    nsize=(int)size/BLOCKSIZE;
-	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    recv(sock,tcp_buf,MAXLEN,0);
+		printf("recvd\n%s\n",tcp_buf);
 	    memset(tcp_buf,0,MAXLEN);
 	    sprintf(tcp_buf,"%d",(int)size);
-	    send(sock,tcp_buf,strlen(tcp_buf),0);
-	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    send(sock,tcp_buf,MAXLEN,0);
+	    recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n%s\n",tcp_buf);
 	    memset(tcp_buf,0,MAXLEN);
 	    // sprintf(tcp_buf,"%d",(int)size);
 	    send(sock,buf,strlen(buf),0);
-	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n%s\n",tcp_buf);
 	    memset(tcp_buf,0,MAXLEN);
 	  }
 	else

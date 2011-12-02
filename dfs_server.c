@@ -22,7 +22,7 @@ void* processClient(void* clientptr)
 		char *a;
 		memset(tcp_buf,0,MAXLEN);
 		recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		printf("Recvd %d\n%s\n",n,tcp_buf);
+//		printf("Recvd %d\n%s\n",n,tcp_buf);
 		a = strtok(tcp_buf,"\n");
 		if(a)
 		{
@@ -231,7 +231,7 @@ void* processClient(void* clientptr)
 		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
 		    }
 		      printf("here4");fflush(stdout);
-		  close(res);
+		  close(fd);
 			printf("End of read\n");
 
                 }
@@ -266,7 +266,7 @@ void* processClient(void* clientptr)
 		      }
 		      tcp_buf[res]='\0';
 
-		      int offset=atoi(tcp_buf);
+		      off_t offset=(off_t)atoi(tcp_buf);
 		      send(clientList[n].conn_socket,"success",strlen("success"),0);
 		      memset(tcp_buf,0,MAXLEN);
 		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
@@ -280,12 +280,12 @@ void* processClient(void* clientptr)
 		      char *recvbuf=(char *)malloc(sizeof(char)*(int)size);
 		      send(clientList[n].conn_socket,"success",strlen("success"),0);
 		      memset(tcp_buf,0,MAXLEN);
-		      res=recv(clientList[n].conn_socket,recvbuf,(int)size,0);
-		      if(res<0){
+		      recv(clientList[n].conn_socket,recvbuf,(int)size+1,0);
+		     /* if(res<0){
 			printf("\nError receiving flags");
 			exit(1);
 		      }
-		      recvbuf[res]='\0';
+		      recvbuf[res]='\0';*/
 
 		      //		      int offset=atoi(tcp_buf);
 		      res = pwrite(fd, recvbuf, size, offset);
@@ -299,8 +299,9 @@ void* processClient(void* clientptr)
 		      //printf("here5");fflush(stdout);
 		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
 		    }
+			memset(tcp_buf,0,MAXLEN);
 		      printf("here4");fflush(stdout);
-		      close(res);
+		      close(fd);
 		      printf("End of write\n");
 
                 }
