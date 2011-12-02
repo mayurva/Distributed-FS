@@ -15,23 +15,20 @@ done and dusted...
 
 19. readlink	
 
+2. mknod	
 
-implement caching 2hr
+10. chmod	
+
+11. chown	
+
+13. utime	
+
+14. rename	
+
+implement caching
 1. getattr	almost done.. caching is to be implemented
 
 8. readdir (getdir)	done..think about caching 
-
-
-waiting on testing
-2. mknod	recheck.. almost done.. not sure how to test
-
-10. chmod	single client non-cached implementation --done -- not working fix it
-
-11. chown	single client non-cached implementation --done --how to test?
-
-13. utime	done... result out of range error.. check out
-
-14. rename	done... how to test?
 
 
 with kamat saheb
