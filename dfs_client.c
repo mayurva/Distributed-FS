@@ -279,17 +279,58 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struc
 
 static int dfs_write(const char *path, const char *buf, size_t size,off_t offset, struct fuse_file_info *fi)
 {
-//client side code goes here
-        printf("Inside write Path is: %s\n",path);
+	printf("Inside write. Path is: %s buf is %s",path,buf);
         memset(tcp_buf,0,MAXLEN);
-        strcpy(tcp_buf,"WRITE\n");
+        sprintf(tcp_buf,"WRITE\n%s",path);
 
+	char wrtFile[100];
+	char *tempBuf;
+	tempBuf=(char *)malloc(sizeof(char)*(int)size);
+	FILE *fd;
+	int recvflag;
+	strcpy(wrtFile,".");
+	strcat(wrtFile,path);
+	strcat(wrtFile,".wrt");
+	fd=fopen(wrtFile,"ab+");
+	//	printf("cacheFile %s",cacheFile);fflush(stdout);
 //tcp code goes here
+       
         send(sock,tcp_buf,strlen(tcp_buf),0);
         memset(tcp_buf,0,MAXLEN);
         recv(sock,tcp_buf,MAXLEN,0);
-//rest of the code goes here
-        printf("Received message: %s\n",tcp_buf);
+	
+        memset(tcp_buf,0,MAXLEN);
+	sprintf(tcp_buf,"%d",fi->flags);
+        send(sock,tcp_buf,strlen(tcp_buf),0);
+	memset(tcp_buf,0,MAXLEN);
+	recv(sock,tcp_buf,MAXLEN,0);
+	
+	if(strcmp(tcp_buf,"success")==0)
+	  {
+
+	    memset(tcp_buf,0,MAXLEN);
+	    sprintf(tcp_buf,"%d",(int)offset);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    strcpy(tempBuf,"");
+	    int nsize,noff;
+	    noff=(int)offset/BLOCKSIZE;
+	    nsize=(int)size/BLOCKSIZE;
+	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	    sprintf(tcp_buf,"%d",(int)size);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	    // sprintf(tcp_buf,"%d",(int)size);
+	    send(sock,buf,strlen(buf),0);
+	    recv(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	  }
+	else
+	  printf("\n%s\n",tcp_buf);
+	     
+	fclose(fd);
+	printf("End of write\n");
         return 0;
 }
 

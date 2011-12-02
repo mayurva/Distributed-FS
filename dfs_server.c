@@ -235,6 +235,75 @@ void* processClient(void* clientptr)
 			printf("End of read\n");
 
                 }
+		else if(strcmp(a,"WRITE") == 0)
+                {
+		  int res,fd,flags;
+		  printf("Received message is %s\n",a);fflush(stdout);
+		  a = strtok(NULL,"\n");
+		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+		  strcpy(path,rootpath);
+		  strcat(path,a);
+		  printf("Path is %s\n",path);fflush(stdout);
+		  memset(tcp_buf,0,MAXLEN);
+		  send(clientList[n].conn_socket,"ok",strlen("ok"),0);
+		  
+		  res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		  if(res<0){
+		    printf("\nError receiving flags");
+		    exit(1);
+		  }
+		  tcp_buf[res]='\0';
+		  flags=atoi(tcp_buf);
+		  fd = open(path,O_WRONLY);
+		  if (fd != -1)
+		    {
+		      send(clientList[n].conn_socket,"success",strlen("success"),0);
+		      memset(tcp_buf,0,MAXLEN);
+		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      if(res<0){
+			printf("\nError receiving flags");
+			exit(1);
+		      }
+		      tcp_buf[res]='\0';
+
+		      int offset=atoi(tcp_buf);
+		      send(clientList[n].conn_socket,"success",strlen("success"),0);
+		      memset(tcp_buf,0,MAXLEN);
+		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      if(res<0){
+			printf("\nError receiving flags");
+			exit(1);
+		      }
+		      tcp_buf[res]='\0';
+
+		      size_t size= (size_t)atoi(tcp_buf);
+		      char *recvbuf=(char *)malloc(sizeof(char)*(int)size);
+		      send(clientList[n].conn_socket,"success",strlen("success"),0);
+		      memset(tcp_buf,0,MAXLEN);
+		      res=recv(clientList[n].conn_socket,recvbuf,(int)size,0);
+		      if(res<0){
+			printf("\nError receiving flags");
+			exit(1);
+		      }
+		      recvbuf[res]='\0';
+
+		      //		      int offset=atoi(tcp_buf);
+		      res = pwrite(fd, recvbuf, size, offset);
+		      if (res == -1)
+			 send(clientList[n].conn_socket,"failed",strlen("failed"),0);
+		      else
+			 send(clientList[n].conn_socket,"written",strlen("written"),0);
+		    }
+		  else
+		    {
+		      //printf("here5");fflush(stdout);
+		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
+		    }
+		      printf("here4");fflush(stdout);
+		      close(res);
+		      printf("End of write\n");
+
+                }
 		else if(strcmp(a,"GETDIR") == 0)
                 {
                         struct stat stbuf;
