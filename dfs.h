@@ -18,9 +18,9 @@
 #define DEBUG
 #define MAX_CLIENTS 10
 #define LISTEN_PORT 5000
-#define MAXLEN 1030
+#define MAXLEN 1050 
 
-#define BLOCKSIZE 1024
+#define BLOCKSIZE 1000 
 
 typedef struct blocks
 {

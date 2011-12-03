@@ -9,7 +9,7 @@ CC = cc
 FLAGS = `pkg-config fuse --cflags --libs`
 
 
-all: client server
+all: client server postmark
 
 postmark:
 	$(CC) postmark.c -o postmark

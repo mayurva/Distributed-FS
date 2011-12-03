@@ -25,37 +25,29 @@ done and dusted...
 
 14. rename	
 
-implement caching
-1. getattr	almost done.. caching is to be implemented
+getxattr
 
-8. readdir (getdir)	done..think about caching 
+setxattr
 
+with awaghade
 
-with kamat saheb
-	
 4. open		done.. need to test...
 
 5. read		some issue after completion.. server keeps on receiving messages	
 
 6. write	finish today	
 
-12. create	To Do
-
 19. flush
 
 
+with kamat saheb
+	
+1. getattr	almost done.. caching is to be implemented
 
-Some other system calls, not sure if we need them
-getxattr
-setxattr
+8. readdir (getdir)	done..think about caching 
 
-flush
-release
-listxattr
-removexattr
-releasedir
-destroy
-opendir
-statfs
+12. create	To Do
+
 truncate
-init
+
+

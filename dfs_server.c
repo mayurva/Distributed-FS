@@ -154,7 +154,7 @@ void* processClient(void* clientptr)
 		  if (res != -1)
 		    send(clientList[n].conn_socket,"success",strlen("success"),0);
 		  else
-		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
+		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);	
 		  close(res);
 		free(path);
 		memset(tcp_buf,0,MAXLEN);
@@ -162,164 +162,215 @@ void* processClient(void* clientptr)
                 }
 		else if(strcmp(a,"READ") == 0)
                 {
-		  int res,fd,flags,tot=0;
-		  printf("Received message is %s\n",a);fflush(stdout);
-		  a = strtok(NULL,"\n");
-		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
-		  strcpy(path,rootpath);
-		  strcat(path,a);
-		  printf("Path is %s\n",path);fflush(stdout);
-		  memset(tcp_buf,0,MAXLEN);
-		  send(clientList[n].conn_socket,"ok",strlen("ok"),0);
+			int res,fd,flags,tot=0;
+			printf("Received message is %s\n",a);fflush(stdout);
+			a = strtok(NULL,"\n");
+			path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+			strcpy(path,rootpath);
+			strcat(path,a);
+			printf("Path is %s\n",path);fflush(stdout);
+			memset(tcp_buf,0,MAXLEN);
+			send(clientList[n].conn_socket,"ok",strlen("ok"),0);
 		  
-		  res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		  if(res<0){
-		    printf("\nError receiving flags");
-		    exit(1);
-		  }
-		  tcp_buf[res]='\0';
-		  flags=atoi(tcp_buf);
-		  fd = open(path,flags);
-		  if (fd != -1)
-		    {
-		      send(clientList[n].conn_socket,"success",strlen("success"),0);
-		      memset(tcp_buf,0,MAXLEN);
-		      res=(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		      if(res<0){
-			printf("\nError receiving flags");
-			exit(1);
-		      }
-		      tcp_buf[res]='\0';
+			res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+			if(res<0){
+				printf("\nError receiving flags");
+		    		exit(1);
+		  	}
+			tcp_buf[res]='\0';
+		  	flags=atoi(tcp_buf);
+		  	fd = open(path,flags);
+		  	if (fd != -1)	//file present. now read required number of blocks
+		    	{
+				int breakflag = 0;
+				char readbuf[MAXLEN];
+		      		send(clientList[n].conn_socket,"success",strlen("success"),0);
+		      		memset(tcp_buf,0,MAXLEN);
+		      		res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      		if(res<0){
+					printf("\nError receiving flags");
+					exit(1);
+		      		}
+			      	tcp_buf[res]='\0';
 
-		      int offset=atoi(tcp_buf);
-		      memset(tcp_buf,0,MAXLEN);
-		      strcpy(tcp_buf,"ok");
-		      printf("here2");fflush(stdout);		      
-		      while(strcmp(tcp_buf,"ok")==0)
-			{
-			  printf("here3");fflush(stdout);
-			  memset(tcp_buf,0,MAXLEN);
-			  int rflag=pread(fd,tcp_buf,BLOCKSIZE,offset);
-			  printf("%s",tcp_buf);fflush(stdout);
-			  if(rflag==-1)
-			    {
-			      send(clientList[n].conn_socket,"file_read_error",strlen("file_read_error"),0);
-			    }
-			  else
-			    {
-			      send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
-			      tot=tot+rflag;
-			    }
-			  
-
-			  memset(tcp_buf,0,MAXLEN);
-			  res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-			  if(res<0){
-			    printf("\nError receiving flags");
-			    exit(1);
-			  }
-			  tcp_buf[res]='\0';
-			  printf("%s",tcp_buf);fflush(stdout);
-			  offset=offset+BLOCKSIZE;
-			}
-		      printf("here6");fflush(stdout);
-		      memset(tcp_buf,0,MAXLEN);
-		      //sleep(10);
-		    }
-		  else
-		    {
-		      //printf("here5");fflush(stdout);
-		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
-		    }
-		      printf("here4");fflush(stdout);
-		  close(fd);
-		  
-		  		      memset(tcp_buf,0,MAXLEN);
-		  recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
- memset(tcp_buf,0,MAXLEN);
- sprintf(tcp_buf,"%d",tot);
-		  send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
-		      memset(tcp_buf,0,MAXLEN);
+		      		int offset=atoi(tcp_buf);
+				printf("offset is %d\n",offset);
+		      		memset(tcp_buf,0,MAXLEN);
+		      		strcpy(tcp_buf,"NEXT");
+		      		printf("reading 1st time\n");fflush(stdout);		      
+				while(strcmp(tcp_buf,"NEXT")==0)
+				{
+			  		//printf("here3");fflush(stdout);
+			  		memset(readbuf,0,BLOCKSIZE);
+			  		int rflag=pread(fd,readbuf,BLOCKSIZE,offset);
+			  		printf("data read\n%s",readbuf);fflush(stdout);
+			  	        if(rflag==0)
+			                {
+						memset(tcp_buf,0,MAXLEN);
+						sprintf(tcp_buf,"FINISH\n%d\n",tot);
+						printf("finished reading\nbytes read is %d\n",tot);
+                  				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);	//send no of bytes read
+						breakflag = 1;	
+						break;
+                			}
+              				else if(rflag==-1)
+                			{
+						memset(tcp_buf,0,MAXLEN);
+						sprintf(tcp_buf,"ERROR\n%d\n",-errno);
+						printf("read error\n");
+                  				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+						breakflag = 1;
+						break;
+                			}
+              				else
+                			{
+						memset(tcp_buf,0,MAXLEN);
+						sprintf(tcp_buf,"NEXT\n%s\n",readbuf);
+						send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+	                  			tot=tot+rflag;
+						printf("reply to client with read data\n");
+                			}
+                			
+			  		memset(tcp_buf,0,MAXLEN);
+			  		res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+			  		if(res<0){
+			    			printf("\nError receiving flags");
+			    			exit(1);
+			  		}
+			  		tcp_buf[res]='\0';
+			  		printf("next message from client is %s\n",tcp_buf);fflush(stdout);
+			  		offset=offset+BLOCKSIZE;
+				}
+				if(!breakflag)
+				{
+					printf("finished reading\n");
+					memset(tcp_buf,0,MAXLEN);
+					sprintf(tcp_buf,"%d",tot);
+                  			send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+					printf("sent bytes read %d\n",tot);
+				}
+		      		printf("here6");fflush(stdout);
+		      		memset(tcp_buf,0,MAXLEN);
+		      		//sleep(10);
+			  	close(fd);
+		    	}
+		  	else
+		    	{
+				memset(tcp_buf,0,MAXLEN);
+				sprintf(tcp_buf,"ERROR\n%d\n",-errno);
+				printf("error opening file\n");
+                  		send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+		    	}
+		     	printf("here4");fflush(stdout);
+			
+		      	memset(tcp_buf,0,MAXLEN);
 			printf("End of read\n");
-
+			free(path);
 
                 }
 		else if(strcmp(a,"WRITE") == 0)
                 {
-		  int res,fd,flags,tot=0;
-		  printf("Received message is %s\n",a);fflush(stdout);
-		  a = strtok(NULL,"\n");
-		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
-		  strcpy(path,rootpath);
-		  strcat(path,a);
-		  printf("Path is %s\n",path);fflush(stdout);
-		  memset(tcp_buf,0,MAXLEN);
-		  send(clientList[n].conn_socket,"ok",strlen("ok"),0);
+		  	int res,fd,flags,tot=0;
+		  	printf("Received message is %s\n",a);fflush(stdout);
+		  	a = strtok(NULL,"\n");
+		  	path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
+		  	strcpy(path,rootpath);
+		  	strcat(path,a);
+		  	printf("Path is %s\n",path);fflush(stdout);
+		  	memset(tcp_buf,0,MAXLEN);
+		  	send(clientList[n].conn_socket,"ok",strlen("ok"),0);
 		  
-		  res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		  if(res<0){
-		    printf("\nError receiving flags");
-		    exit(1);
-		  }
-		  tcp_buf[res]='\0';
-		  flags=atoi(tcp_buf);
-		  fd = open(path,O_WRONLY);
-		  if (fd != -1)
-		    {
-		      send(clientList[n].conn_socket,"success",strlen("success"),0);
-		      memset(tcp_buf,0,MAXLEN);
-		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		      if(res<0){
-			printf("\nError receiving flags");
-			exit(1);
-		      }
-		      tcp_buf[res]='\0';
+		  	res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		  	if(res<0){
+		    		printf("\nError receiving flags");
+		    		exit(1);
+		  	}
+		  	tcp_buf[res]='\0';
+		  	flags=atoi(tcp_buf);
+		  	fd = open(path,O_WRONLY);
+		  	if (fd != -1)
+		    	{
+				char *b;
+				printf("file opened\n");
+				int breakflag = 0;
+		      		send(clientList[n].conn_socket,"success",strlen("success"),0);
+		      		memset(tcp_buf,0,MAXLEN);
+		      		res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      		if(res<0){
+					printf("\nError receiving flags");
+					exit(1);
+		      		}
+		      		tcp_buf[res]='\0';
 
-		      off_t offset=(off_t)atoi(tcp_buf);
-		      send(clientList[n].conn_socket,"success",strlen("success"),0);
-		      memset(tcp_buf,0,MAXLEN);
-		      res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		      if(res<0){
-			printf("\nError receiving flags");
-			exit(1);
-		      }
-		      tcp_buf[res]='\0';
+		      		off_t offset=(off_t)atoi(tcp_buf);
+				printf("got the offset\n");
+		      		send(clientList[n].conn_socket,"NEXT",strlen("NEXT"),0);
+		      		//memset(tcp_buf,0,MAXLEN);
+		      		//res=recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		      		//if(res<0){
+				//	printf("\nError receiving flags");
+				//	exit(1);
+		      		//}
+		      		//tcp_buf[res]='\0';
+		      		//size_t size= (size_t)atoi(tcp_buf);
+		      		//send(clientList[n].conn_socket,"success",strlen("success"),0);
 
-		      size_t size= (size_t)atoi(tcp_buf);
-		      char *recvbuf=(char *)malloc(sizeof(char)*(int)size);
-		      send(clientList[n].conn_socket,"success",strlen("success"),0);
-		      memset(tcp_buf,0,MAXLEN);
-		      recv(clientList[n].conn_socket,recvbuf,(int)size+1,0);
-		     /* if(res<0){
-			printf("\nError receiving flags");
-			exit(1);
-		      }
-		      recvbuf[res]='\0';*/
+			      	memset(tcp_buf,0,MAXLEN);
+			      	//char *recvbuf=(char *)malloc(sizeof(char)*(size+5));
+		      		recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+				tot = 0;
+				printf("start writing\n");
 
-		      //		      int offset=atoi(tcp_buf);
-		      res = pwrite(fd, recvbuf, size, offset);
-		      if (res == -1)
-			 send(clientList[n].conn_socket,"failed",strlen("failed"),0);
-		      else
-			 send(clientList[n].conn_socket,"written",strlen("written"),0);
-		      tot=res;
-		    }
-		  else
-		    {
-		      //printf("here5");fflush(stdout);
-		    send(clientList[n].conn_socket,"failed",strlen("failed"),0);
-		    }
-			memset(tcp_buf,0,MAXLEN);
-		      printf("here4");fflush(stdout);
-		      close(fd);
-		      memset(tcp_buf,0,MAXLEN);
-		      recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
-		   memset(tcp_buf,0,MAXLEN);
-		   sprintf(tcp_buf,"%d",tot);
-		  send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
-		      memset(tcp_buf,0,MAXLEN);
-		      printf("End of write\n");
+				while(strcmp(tcp_buf,"END")!=0)
+				{
+					a = strtok_r(tcp_buf,"\n",&b);
+					//a = strtok(NULL,"\n");	
+			      		//int offset=atoi(tcp_buf);
+					//strcpy(recvbuf,tcp_buf);
+		      			res = pwrite(fd, b, strlen(b), offset);
+					printf("%d bytes written\n",res);
+		      			if (res == -1)
+					{
+						memset(tcp_buf,0,MAXLEN);
+						sprintf(tcp_buf,"ERROR\n%d\n",-errno);
+		    				send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+						breakflag = 1;
+						break;
+					}
+				 	send(clientList[n].conn_socket,"NEXT",strlen("NEXT"),0);
+					offset = offset + BLOCKSIZE;
+					tot += res;
 
+			      		memset(tcp_buf,0,MAXLEN);
+			      		//char *recvbuf=(char *)malloc(sizeof(char)*(size+5));
+		      			recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+				}
+				if(!breakflag)
+				{
+		      			//res = pwrite(fd, "\n", strlen("\n"), offset);
+					//tot += res;
+					printf("total is %d\n",tot);
+				      	sprintf(tcp_buf,"%d",tot);					
+					send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+				}
+		      		close(fd);
+		    	}
+		  	else
+		    	{
+				memset(tcp_buf,0,MAXLEN);
+				sprintf(tcp_buf,"ERROR\n%d\n",-errno);
+		    		send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+		    	}
+			/*memset(tcp_buf,0,MAXLEN);
+		      	printf("here4");fflush(stdout);
+		      	memset(tcp_buf,0,MAXLEN);
+		      	recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		   	memset(tcp_buf,0,MAXLEN);
+		   	sprintf(tcp_buf,"%d",tot);
+		  	send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);*/
+		      	memset(tcp_buf,0,MAXLEN);
+		      	printf("End of write\n");
+			free(path);
                 }
 		else if(strcmp(a,"GETDIR") == 0)
                 {
