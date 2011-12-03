@@ -274,7 +274,11 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struc
 	printf("%shere5",buf);fflush(stdout);
 	fclose(fd);
 	printf("End of read\n");
-        return 0;
+	send(sock,"total",strlen("total"),0);
+	int rf=recv(sock,tcp_buf,MAXLEN,0);
+	tcp_buf[rf]='\0';
+	int ret=atoi(tcp_buf);
+        return ret;
 }
 
 static int dfs_write(const char *path, const char *buf, size_t size,off_t offset, struct fuse_file_info *fi)
@@ -336,7 +340,11 @@ static int dfs_write(const char *path, const char *buf, size_t size,off_t offset
 	     
 	fclose(fd);
 	printf("End of write\n");
-        return 0;
+	send(sock,"total",strlen("total"),0);
+	int rf=recv(sock,tcp_buf,MAXLEN,0);
+	tcp_buf[rf]='\0';
+	int ret=atoi(tcp_buf);
+        return ret;
 }
 
 

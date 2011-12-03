@@ -134,7 +134,7 @@ void* processClient(void* clientptr)
                 }
 		else if(strcmp(a,"OPEN") == 0)
                 {
- 		  int res,flags;
+ 		  int res,flags,tot=0;
 		  printf("Received message is %s\n",a);
 		  a = strtok(NULL,"\n");
 		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
@@ -162,7 +162,7 @@ void* processClient(void* clientptr)
                 }
 		else if(strcmp(a,"READ") == 0)
                 {
-		  int res,fd,flags;
+		  int res,fd,flags,tot=0;
 		  printf("Received message is %s\n",a);fflush(stdout);
 		  a = strtok(NULL,"\n");
 		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
@@ -208,6 +208,7 @@ void* processClient(void* clientptr)
 			  else
 			    {
 			      send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+			      tot=tot+rflag;
 			    }
 			  
 
@@ -232,12 +233,20 @@ void* processClient(void* clientptr)
 		    }
 		      printf("here4");fflush(stdout);
 		  close(fd);
+		  
+		  		      memset(tcp_buf,0,MAXLEN);
+		  recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+ memset(tcp_buf,0,MAXLEN);
+ sprintf(tcp_buf,"%d",tot);
+		  send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+		      memset(tcp_buf,0,MAXLEN);
 			printf("End of read\n");
+
 
                 }
 		else if(strcmp(a,"WRITE") == 0)
                 {
-		  int res,fd,flags;
+		  int res,fd,flags,tot=0;
 		  printf("Received message is %s\n",a);fflush(stdout);
 		  a = strtok(NULL,"\n");
 		  path = (char*)malloc(strlen(rootpath)+strlen(a)+5);
@@ -293,6 +302,7 @@ void* processClient(void* clientptr)
 			 send(clientList[n].conn_socket,"failed",strlen("failed"),0);
 		      else
 			 send(clientList[n].conn_socket,"written",strlen("written"),0);
+		      tot=res;
 		    }
 		  else
 		    {
@@ -302,6 +312,12 @@ void* processClient(void* clientptr)
 			memset(tcp_buf,0,MAXLEN);
 		      printf("here4");fflush(stdout);
 		      close(fd);
+		      memset(tcp_buf,0,MAXLEN);
+		      recv(clientList[n].conn_socket,tcp_buf,MAXLEN,0);
+		   memset(tcp_buf,0,MAXLEN);
+		   sprintf(tcp_buf,"%d",tot);
+		  send(clientList[n].conn_socket,tcp_buf,strlen(tcp_buf),0);
+		      memset(tcp_buf,0,MAXLEN);
 		      printf("End of write\n");
 
                 }
