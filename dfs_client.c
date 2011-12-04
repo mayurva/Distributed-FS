@@ -11,41 +11,66 @@ char *a;
 static int dfs_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
+	int rf=0;
 //client side code goes here
 
 	struct stat temp_stbuf;
         FILE *fp;
         char *fname;
-
+	char *cachefile;	
 	printf("Inside getattr Path is: %s\n",path);
-	memset(tcp_buf,0,MAXLEN);
-	sprintf(tcp_buf,"GETATTR\n%s\n",path);
-	printf("path copied\n%s\n",tcp_buf);	
-	//res=lstat(path,stbuf);
-
-//tcp code goes here
-	send(sock,tcp_buf,strlen(tcp_buf),0);
-	memset(tcp_buf,0,MAXLEN);
-	recv(sock,tcp_buf,MAXLEN,0);
-	printf("recvd\n");
-	
-
-	a = strtok(tcp_buf,"\n");
-	if(strcmp(a,"FAIL")==0)
+	cachefile = (char*)malloc(strlen(rootpath)+strlen(path)+10);
+	strcpy(cachefile,rootpath);
+	strcat(cachefile,path);
+	strcat(cachefile,".attrib");
+	//cachefile[0]='.';
+	printf("cache file is %s\n",cachefile);
+	fp = fopen(cachefile,"rb");	
+	if(fp!=NULL)
 	{
-		printf("getattr failed\n");
-		a = strtok(NULL,"\n");
-		errno = atoi(a);
-		return -errno;
+		rf = fread(&temp_stbuf,sizeof(temp_stbuf),1,fp);
+		fclose(fp);
 	}
 
-	printf("%s\n",a);
-	memset(tcp_buf,0,MAXLEN);
-	strcpy(tcp_buf,"ACK\n");
-	send(sock,tcp_buf,strlen(tcp_buf),0);
-	recv(sock,(char *)&temp_stbuf,sizeof(struct stat),0);
-	printf("Received stbuf\n");	
-	
+	if(!rf)
+	{
+		printf("data not cached\n");
+		memset(tcp_buf,0,MAXLEN);
+		sprintf(tcp_buf,"GETATTR\n%s\n",path);
+		printf("path copied\n%s\n",tcp_buf);
+		//res=lstat(path,stbuf);
+
+//tcp code goes here
+		send(sock,tcp_buf,strlen(tcp_buf),0);
+		memset(tcp_buf,0,MAXLEN);
+		recv(sock,tcp_buf,MAXLEN,0);
+		printf("recvd\n");
+
+		a = strtok(tcp_buf,"\n");
+		if(strcmp(a,"FAIL")==0)
+		{
+			printf("getattr failed\n");
+			a = strtok(NULL,"\n");
+			errno = atoi(a);
+			return -errno;
+		}
+
+		printf("%s\n",a);
+		memset(tcp_buf,0,MAXLEN);
+		strcpy(tcp_buf,"ACK\n");
+		send(sock,tcp_buf,strlen(tcp_buf),0);
+		recv(sock,(char *)&temp_stbuf,sizeof(struct stat),0);
+		printf("Received stbuf\n");	
+
+		fp = fopen(cachefile,"wb+");	
+		if(fp!=NULL)
+		{
+			rf = fwrite(&temp_stbuf,sizeof(temp_stbuf),1,fp);
+			fclose(fp);
+		}
+	}
+	else
+		printf("cached data found\n%s\n",cachefile);
 //rest of the code goes here
 
 	stbuf->st_dev = temp_stbuf.st_dev;
@@ -195,14 +220,14 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struc
 	if(strcmp(tcp_buf,"success")==0)
 	{
 		printf("open successful\n");
-	    	memset(tcp_buf,0,MAXLEN);
-	    	sprintf(tcp_buf,"%d",(int)offset);	//send offset as off_t
-	    	send(sock,tcp_buf,strlen(tcp_buf),0);
+		memset(tcp_buf,0,MAXLEN);
+		sprintf(tcp_buf,"%d",(int)offset);	//send offset as off_t
+		send(sock,tcp_buf,strlen(tcp_buf),0);
 		printf("sent offset\n");
-	    	strcpy(tempBuf,"");
-	    	int nsize,noff;
-	    	noff=(int)offset/BLOCKSIZE;
-	    	nsize=((int)size/BLOCKSIZE)+1;	//this cud be issue
+		strcpy(tempBuf,"");
+		int nsize,noff;
+		noff=(int)offset/BLOCKSIZE;
+		nsize=((int)size/BLOCKSIZE)+1;	//this cud be issue
 		printf("offset is %d and blockes are %d\n",noff,nsize);
 
 	     

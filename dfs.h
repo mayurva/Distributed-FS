@@ -18,16 +18,15 @@
 #define DEBUG
 #define MAX_CLIENTS 10
 #define LISTEN_PORT 5000
-#define MAXLEN 1050 
+#define MAXLEN 4120
 
-#define BLOCKSIZE 1000 
+#define BLOCKSIZE 4096 
 
 typedef struct blocks
 {
   int blockNumber;
   char blockData[BLOCKSIZE];
 }blocks;
-
 
 typedef struct client_info_{
 	int id;

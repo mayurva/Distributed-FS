@@ -856,7 +856,7 @@ int main()
                         printf("Connected to client %d\n",i);
                 #endif
 		j=i;
-                pthread_create(&clientList[i].thread,NULL,processClient,(void*)&j);
+		pthread_create(&clientList[i].thread,NULL,processClient,(void*)&j);
                 i++;
 
         }
