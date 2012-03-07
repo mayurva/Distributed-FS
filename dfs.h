@@ -18,9 +18,24 @@
 #define DEBUG
 #define MAX_CLIENTS 10
 #define LISTEN_PORT 5000
-#define MAXLEN 4120
+#define CTRL_PORT 5001
+#define MAXLEN 1030
 
-#define BLOCKSIZE 4096 
+#define BLOCKSIZE 1024
+
+typedef struct file_info_ {
+	char *path;
+	int writer;
+	int reader[10];
+	int lease_expired;
+	struct file_info_ *next;
+} file_info;
+
+typedef struct write_list_ {
+	char *path;
+	int write_back;
+	struct write_file_ *next;	
+} write_list;
 
 typedef struct blocks
 {
@@ -44,6 +59,7 @@ extern char *rootpath;
 extern server s;
 extern client_info *clientList;
 extern int sock;
+extern file_info *list_head;
 
 server populatePublicIp(server);
 

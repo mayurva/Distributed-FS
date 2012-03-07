@@ -152,7 +152,8 @@ static int dfs_mkdir(const char *path, mode_t mode)
 
 static int dfs_open(const char *path, struct fuse_file_info *fi)
 {
-        printf("Inside open Path is: %s\n",path);
+  int ret=0;      
+  printf("Inside open Path is: %s\n",path);
         memset(tcp_buf,0,MAXLEN);
         sprintf(tcp_buf,"OPEN\n%s",path);
 
@@ -166,12 +167,31 @@ static int dfs_open(const char *path, struct fuse_file_info *fi)
 	sprintf(tcp_buf,"%d",fi->flags);
         send(sock,tcp_buf,strlen(tcp_buf),0);
 	memset(tcp_buf,0,MAXLEN);
-	recv(sock,tcp_buf,MAXLEN,0);
+	int res=recv(sock,tcp_buf,MAXLEN,0);
+	if(res<0){
+	  printf("\nError receiving flags");
+	  exit(1);
+	}
+	tcp_buf[res]='\0';
+
+	if(strcmp(tcp_buf,"failed")==0)
+	  {
+	  printf("sending errno");fflush(stdout);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	    res=recv(sock,tcp_buf,MAXLEN,0);
+	    if(res<0){
+	      printf("\nError receiving flags");
+	      exit(1);
+	    }
+	    tcp_buf[res]='\0';
+	    ret=atoi(tcp_buf);
+	  }
 
 	//	if(strcmp(tcp_buf,"success")!=0)
 	printf("\n%s\n",tcp_buf);
 	printf("End of open\n");
-        return 0;
+        return ret;
 
 }
 
@@ -179,31 +199,46 @@ void writeToFile(FILE *fp,blocks *temp)
 {
   printf("writing to file");fflush(stdout);
   printf("%d",temp->blockNumber);fflush(stdout);
+    printf("\n%s\n\n%d\n",temp->blockData,temp->blockNumber);
   //	 sleep(5);
   fwrite(temp,sizeof(blocks),1,fp);
 }
 
-int searchFile(int a)
+int searchFile(int blkNo,FILE *fd)
 {
+   FILE *fp;
+   //  fp=fopen("abc.txt.cache","rb");
+  
+  blocks temp;  
+  
+  while(fread(&temp,sizeof(blocks),1,fd)){
+    if(temp.blockNumber==blkNo){
+      printf("present in cache");
+      return(1);
+    }
+    printf("\n%s\n\n%d\n",temp.blockData,temp.blockNumber);
+  }
   return(0);
 }
 
 static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info *fi)
 {
-	int ret;
-  	printf("Inside read. Path is: %s \n",path);
+  printf("Inside read. Path is: %s buf is %s",path,buf);
         memset(tcp_buf,0,MAXLEN);
-        sprintf(tcp_buf,"READ\n%s\n",path);
+        sprintf(tcp_buf,"READ\n%s",path);
 
+	(void)fi;
 	char cacheFile[100];
 	char *tempBuf;
-	tempBuf=(char *)malloc(sizeof(char)*((int)size*2));
+	//	tempBuf=(char *)malloc(sizeof(char)*(int)size);
 	FILE *fd;
-	int recvflag;
+	int cacheflag=0,exitflag=0;
+	int ret=0,tempsize,res;
+	int recvflag,retval=0;
 	strcpy(cacheFile,".");
 	strcat(cacheFile,path);
 	strcat(cacheFile,".cache");
-	//fd=fopen(cacheFile,"ab+");
+	fd=fopen(cacheFile,"ab+");
 	//	printf("cacheFile %s",cacheFile);fflush(stdout);
 //tcp code goes here
        
@@ -218,129 +253,213 @@ static int dfs_read(const char *path, char *buf, size_t size, off_t offset,struc
 	recv(sock,tcp_buf,MAXLEN,0);
 	
 	if(strcmp(tcp_buf,"success")==0)
-	{
-		printf("open successful\n");
-		memset(tcp_buf,0,MAXLEN);
-		sprintf(tcp_buf,"%d",(int)offset);	//send offset as off_t
-		send(sock,tcp_buf,strlen(tcp_buf),0);
-		printf("sent offset\n");
-		strcpy(tempBuf,"");
-		int nsize,noff;
-		noff=(int)offset/BLOCKSIZE;
-		nsize=((int)size/BLOCKSIZE)+1;	//this cud be issue
-		printf("offset is %d and blockes are %d\n",noff,nsize);
+	  {
+	    
+	    
+	    int nsize,noff;
+	    noff=(int)offset/BLOCKSIZE;
+	    nsize=(int)size/BLOCKSIZE+1;
+	    tempBuf=(char *)malloc(sizeof(char)*(nsize*BLOCKSIZE));
+	    strcpy(tempBuf,""); 
+	     //printf("\n\nnoff %d offset %d\nnsize %d size %d",noff,(int)offset,nsize,(int)size);fflush(stdout);
+	    int i;
+	    for(i=1;i<nsize;i++)
+	      {
+	/*************************cached data*******************************/
+		if(searchFile(noff+1,fd)==1)
+		  {
+		    printf("\n\nfound!!!!!\n\n");
+		    
+		    cacheflag=1;
+		    memset(tcp_buf,0,MAXLEN);
+		    
+		    FILE *fp;
+		    //  fp=fopen("abc.txt.cache","rb");
+  
+		    blocks temp;  
+		    fseek(fd,0,SEEK_SET);
+		    while(fread(&temp,sizeof(blocks),1,fd))
+		      {
+		      
+		      if(temp.blockNumber==noff+1)
+			{
+			//			   printf("present in cache");
+			  
+			tempsize=strlen(temp.blockData);
+ printf("%s\n\n<3<3<3<3<3%d:: %d",temp.blockData,(int)size,tempsize);fflush(stdout);
+			//if(tempsize>=BLOCKSIZE)
+			// tempsize=tempsize-1;
+ /*	char *tempblock=(char *)malloc(sizeof(char)*tempsize);
+			int j;
+			memset(tempblock,0,tempsize);
+			for(j=0;j<tempsize-1;j++)
+			tempblock[j]=temp.blockData[j];*/
+			strcat(tempBuf,temp.blockData);
+			ret=ret+tempsize;
+			retval=retval+tempsize;
+			printf("This happens");fflush(stdout);
+			//		free(tempblock);
+			break;
+		      }
+		    }
+		    if(tempsize<BLOCKSIZE)
+		      {
+			send(sock,"cache",strlen("cache"),0);
+			printf("next\ni is %d and nsize is %d\n",i,nsize);
+			exitflag=1;
+			break;
+		      }
+		    if(i!=nsize)
+		      {
+			send(sock,"ok",strlen("ok"),0);
+			printf("ok\ni is %d and nsize is%d\n",i,nsize);
+		      }
+		    else
+		      {
+			send(sock,"done",strlen("done"),0);
+			printf("next\ni is %d and nsize is %d\n",i,nsize);
+			exitflag=1;
+			break;
+		      }
 
-	     
-	     	//printf("\n\nnoff %d offset %d\nnsize %d size %d",noff,(int)offset,nsize,(int)size);fflush(stdout);
-	    	int i;
-	    	for(i=0;i<nsize;i++)
-	      	{
-			if(searchFile(i+noff)==1)
-		  	{
+		    fflush(stdout);
 
+		  }
 
-		  	}
-			else
-		  	{
-		  		char *b;
-		    		memset(tcp_buf,0,MAXLEN);
-		    		recvflag=recv(sock,tcp_buf,MAXLEN,0);
-				printf("recvd block %d\n",i+noff);
-		    		if(recvflag<0)
-		      		{
-					printf("Receiving error");
-					exit(0);
-		      		}
-				a = strtok_r(tcp_buf,"\n",&b);
-				if(strcmp(a,"NEXT")!=0)
-				{
-					printf("eroor or EOF\n");
-					a = strtok_r(NULL,"\n",&b);
-					ret = atoi(a);
-					break;
-				}	
+		/*********************************if uncached***************************************************/
+		else
+		  {
+		    
+		    memset(tcp_buf,0,MAXLEN);
+		    // if(i==1)
+		      sprintf(tcp_buf,"%d",(noff*BLOCKSIZE));
+		      //		else
+		      // sprintf(tcp_buf,"%d",(((int)offset) + (BLOCKSIZE * (i-1))));
+		    send(sock,tcp_buf,strlen(tcp_buf),0);
+		    
+		    memset(tcp_buf,0,MAXLEN);
+		    recvflag=recv(sock,tcp_buf,BLOCKSIZE,0);
+		    if(recvflag<0)
+		      {
+			printf("Receiving error");
+			exit(0);
+		      }
+		    
+		    //if(i==nsize-1)
+		    // tcp_buf[recvflag]='\0';
+		    //strcat(
+		    //tcp_buf[recvflag]='\0';
 		
-		    		//if(i==nsize-1)
-		    		// tcp_buf[recvflag]='\0';
-		    		//strcat(
-		    		//tcp_buf[recvflag]='\0';
+		    //tcp_buf[recvflag]='\0';
 		
-		    		//tcp_buf[recvflag]='\0';
-		
-		    		/*blocks *temp;
-		    		temp=(blocks *)malloc(sizeof(blocks));
-		    		temp->blockNumber=noff+i;
-		    		strcpy(temp->blockData,tcp_buf);
-		    		temp->blockData[recvflag]='\0';
-		    		writeToFile(fd,temp);*/
-		    		//	printf("tcp_buf %s",tcp_buf);fflush(stdout);
+		    blocks temp;
+		    //temp=(blocks *)malloc(sizeof(blocks));
+		    temp.blockNumber=noff;
 
-		    		/*if(recvflag<BLOCKSIZE){
-		      			//tcp_buf[recvflag]='\0';
-		      			send(sock,"next",strlen("next"),0);
-		      			printf("next\ni is %d and nsize is %d\n",i,nsize);		  
-		      			break;
-		    		}
-		    		else*/
-				//a = strtok(NULL,"\n");
-				strcat(tempBuf,b);
-		       		memset(tcp_buf,0,MAXLEN);
+		    strcpy(temp.blockData,tcp_buf);
+		    // temp->blockData[recvflag]='\0';
+		    writeToFile(fd,&temp);
+		    retval=retval+recvflag;
+			strcat(tempBuf,tcp_buf);
+		    //  printf("block :@:@:@:@ %s",temp->blockData);
+		    if(strcmp(temp.blockData,"file_is_finished")==0 || recvflag<BLOCKSIZE){
+		      //tcp_buf[recvflag]='\0';
+		      //		      strcat(tempBuf,tcp_buf);
+		      send(sock,"next",strlen("next"),0);
+		      printf("next\ni is %d and nsize is %d\n",i,nsize);		  
+			exitflag=1;
+			printf("Break from here");fflush(stdout);
+		      break;
+		    }
+		    // else
+		    //  {
 
-		    		if(i+1==nsize)
-		      		{
-					send(sock,"FINISH",strlen("FINISH"),0);
-					printf("finished reading\ni is %d and nsize is%d\n",i,nsize);
-					recv(sock,tcp_buf,strlen(tcp_buf),0);
-					ret = atoi(tcp_buf);
-					printf("recvd bytes read\n");
-		      		}
-		    		else
-		      		{
-					send(sock,"NEXT",strlen("NEXT"),0);
-					printf("need next block\ni is %d and nsize is %d\n",i,nsize);
-		      		}
-		    		fflush(stdout);
-		    		//sleep(1);
-		  	}
-	      	}
+		    //  }
+		    // free(temp);
+		    // writeToFile(fd,temp);
+		    //	printf("tcp_buf %s",tcp_buf);fflush(stdout);
+
+		    memset(tcp_buf,0,MAXLEN);
+		    if(i!=nsize)
+		      {
+			send(sock,"ok",strlen("ok"),0);
+			printf("ok\ni is %d and nsize is%d\n",i,nsize);
+		      }
+		    else
+		      {
+			send(sock,"next",strlen("next"),0);
+			printf("next\ni is %d and nsize is %d\n",i,nsize);
+		      }
+		    fflush(stdout);
+		    //sleep(1);
+		  }
+		//		offset++;
+		//		printf("off:%d",(int)offset);
+		printf("hi pathav ki");fflush(stdout);
+		recv(sock,tcp_buf,MAXLEN,0);
+		noff++;
+	      }
+	  }
+	else{
+	  //printf("\n%s\n",tcp_buf);
+	  printf("sending errno");fflush(stdout);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	    res=recv(sock,tcp_buf,MAXLEN,0);
+	    if(res<0){
+	      printf("\nError receiving flags");
+	      exit(1);
+	    }
+	    tcp_buf[res]='\0';
+	    ret=atoi(tcp_buf);
+	    // send(sock,"next",strlen("next"),0);
+	    return ret;
+
+	//	printf("next\ni is %d and nsize is %d\n",i,nsize);
 	}
-	else
-	{
-		printf("error\n");
-		printf("\n%s\n",tcp_buf);
-		a = strtok(tcp_buf,"\n");
-		a = strtok(NULL,"\n");
-		ret = atoi(a);
-	}
-//	strcat(tempBuf,tcp_buf);
-//	strcat(tempBuf,"\n");
-	memcpy(buf,tempBuf,size);
+
 	
-	printf("%shere5",buf);fflush(stdout);
-	//fclose(fd);
-	printf("End of read\nret is %d\n",ret);
+	if(exitflag==1)
+	  recv(sock,tcp_buf,MAXLEN,0);
+
+	//printf("%shere5",buf);fflush(stdout);
+	fclose(fd);
+	printf("End of read\n");
+	//	if(cacheflag==0){
+	  //strcat(tempBuf,tcp_buf);
+	//send(sock,"total",strlen("total"),0);
+	//int rf=recv(sock,tcp_buf,MAXLEN,0);
+	//tcp_buf[rf]='\0';
+	//ret=atoi(tcp_buf);
+	//}*/
+
+	//	strcpy(buf,tempBuf);
+	printf("print");fflush(stdout);
+	memcpy(buf,tempBuf+((int)offset%BLOCKSIZE),(int)size);
+	buf[(int)size]='\0';
+	printf("\n\nbuf,%s",buf);fflush(stdout);
 	free(tempBuf);
-	//int ret=atoi(tcp_buf);
-        return ret;
+	memset(tcp_buf,0,MAXLEN);
+	printf("return %d:: %d",strlen(buf),(int)size);
+        return (int)size;
 }
+
 
 static int dfs_write(const char *path, const char *buf, size_t size,off_t offset, struct fuse_file_info *fi)
 {
-	printf("Inside write. Path is: %s buf is %s\n",path,buf);
+	printf("Inside write. Path is: %s buf is %s",path,buf);
         memset(tcp_buf,0,MAXLEN);
-        sprintf(tcp_buf,"WRITE\n%s\n",path);
+        sprintf(tcp_buf,"WRITE\n%s",path);
 
 	char wrtFile[100];
-	char tempBuf[MAXLEN];
-	char *bufptr;
-	int ret;
-	//tempBuf=(char *)malloc(sizeof(char)*(int)size);
+	char *tempBuf;
+	tempBuf=(char *)malloc(sizeof(char)*(int)size);
 	FILE *fd;
 	int recvflag;
 	strcpy(wrtFile,".");
 	strcat(wrtFile,path);
 	strcat(wrtFile,".wrt");
-//	fd=fopen(wrtFile,"ab+");
+	fd=fopen(wrtFile,"ab+");
 	//	printf("cacheFile %s",cacheFile);fflush(stdout);
 //tcp code goes here
        
@@ -357,63 +476,56 @@ static int dfs_write(const char *path, const char *buf, size_t size,off_t offset
 	printf("recvd (this should be success)\n%s\n",tcp_buf);
 	
 	if(strcmp(tcp_buf,"success")==0)
-	{
-		int i;
-		printf("file opened\n");
-	    	memset(tcp_buf,0,MAXLEN);
-	    	sprintf(tcp_buf,"%d",(int)offset);
-	    	send(sock,tcp_buf,strlen(tcp_buf),0);
-	    	strcpy(tempBuf,"");
-	    	int nsize,noff;
-		printf("size is %d\n",size);
-	    	noff=(int)offset/BLOCKSIZE;
-	    	nsize=((int)size-1)/BLOCKSIZE+1;
-		printf("offset is %d\nand blocks are %d\n",noff,nsize);
-	    	recv(sock,tcp_buf,MAXLEN,0);
+	  {
+
+	    memset(tcp_buf,0,MAXLEN);
+	    sprintf(tcp_buf,"%d",(int)offset);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    strcpy(tempBuf,"");
+	    int nsize,noff;
+	    noff=(int)offset/BLOCKSIZE;
+	    nsize=(int)size/BLOCKSIZE;
+	    recv(sock,tcp_buf,MAXLEN,0);
 		printf("recvd\n%s\n",tcp_buf);
-		bufptr = buf;
-		printf("starting the write loop\n");
-		for(i=0;i<nsize;i++)
-		{
-			memset(tempBuf,0,BLOCKSIZE);
-			memcpy(tempBuf,bufptr,BLOCKSIZE);
-			sprintf(tcp_buf,"NEXT\n%s",tempBuf);
-	    		send(sock,tcp_buf,strlen(tcp_buf),0);
-	    		recv(sock,tcp_buf,MAXLEN,0);
-			a = strtok(tcp_buf,"\n");
-			if(strcmp(a,"ERROR")==0)
-			{
-				a = strtok(NULL,"\n");
-				ret = atoi(a);
-				printf("Error\nexiting write\n");
-				return ret;
-			}
-			printf("recvd\n%s\n",tcp_buf);
-			printf("Wrote block %d\n",i+noff);
-			bufptr = bufptr + BLOCKSIZE;	
-		}
-	}
+	    memset(tcp_buf,0,MAXLEN);
+	    sprintf(tcp_buf,"%d",(int)size);
+	    send(sock,tcp_buf,MAXLEN,0);
+	    recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n%s\n",tcp_buf);
+	    memset(tcp_buf,0,MAXLEN);
+	    // sprintf(tcp_buf,"%d",(int)size);
+	    send(sock,buf,strlen(buf),0);
+	    recv(sock,tcp_buf,MAXLEN,0);
+	printf("recvd\n%s\n",tcp_buf);
+	    memset(tcp_buf,0,MAXLEN);
+	  }
 	else
-	{
-		printf("\n%s\n",tcp_buf);
-		a = strtok(tcp_buf,"\n");
-		a = strtok(NULL,"\n");
-		ret = atoi(a);
-		printf("Error\nexiting write\n");
-		return ret;
-	}
+	  {
+	    int ret,res;
+	  printf("\n%s\n",tcp_buf);
+	    send(sock,tcp_buf,strlen(tcp_buf),0);
+	    memset(tcp_buf,0,MAXLEN);
+	    res=recv(sock,tcp_buf,MAXLEN,0);
+	    if(res<0){
+	      printf("\nError receiving flags");
+	      exit(1);
+	    }
+	    tcp_buf[res]='\0';
+	    ret=atoi(tcp_buf);
+	    // send(sock,"next",strlen("next"),0);
+	    return ret;
+
+	  }
 	     
-//	fclose(fd);
+	fclose(fd);
 	printf("End of write\n");
-	send(sock,"END",strlen("END"),0);
-	memset(tcp_buf,0,MAXLEN);
+	send(sock,"total",strlen("total"),0);
 	int rf=recv(sock,tcp_buf,MAXLEN,0);
-	printf("bytes written\n%s\n",tcp_buf);
-//	tcp_buf[rf]='\0';
-	ret=atoi(tcp_buf);
-	printf("%d bytes wrote\n",ret);
+	tcp_buf[rf]='\0';
+	int ret=atoi(tcp_buf);
         return ret;
 }
+
 
 
 static int dfs_getdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t offset, struct fuse_file_info *fi)
@@ -784,7 +896,7 @@ static struct fuse_operations dfs_oper = {
 .symlink = (void *)dfs_symlink,
 .link = (void *)dfs_link,
 .unlink = (void *)dfs_unlink,
-.flush = (void*)dfs_flush, 
+//.flush = (void*)dfs_flush, 
 .utimens = (void*)dfs_utimens,
 .readlink = (void*)dfs_readlink,
 .getxattr = (void*)dfs_getxattr,

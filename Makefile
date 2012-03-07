@@ -6,7 +6,7 @@ CLI_OUT = client
 SER_OUT = server_dir/server
 CC = cc
 
-FLAGS = `pkg-config fuse --cflags --libs`
+FLAGS = 'pkg-config fuse --cflags --libs'
 
 
 all: client server postmark

@@ -1,4 +1,20 @@
+ideas for enhancement
+
+Each client and servers run 2 more control threads.
+Only 1 client can write a a moment
+
+
+
+
+
+
+
+
+
+
+
 FUSE Operations
+
 
 done and dusted...
 3. mkdir	
